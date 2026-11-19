@@ -1,0 +1,7 @@
+*.log
+*.tmp
+baseline.json
+snapshot*.json
+report*.txt
+TestResults.xml
+.vscode/
