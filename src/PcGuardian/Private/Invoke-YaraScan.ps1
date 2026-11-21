@@ -45,14 +45,19 @@ function Invoke-YaraScan {
     $found = 0
     foreach ($p in $Path) {
         # -r recurse, -w no warnings, -f fast mode, -a per-file timeout (s), -z skip files over ~50 MB
-        $yargs = @('-C', '-r', '-w', '-f', '-a', '30', '-z', '52428800', $rules, $p)
+        # -m prints rule metadata so the rule author can be kept (required by the Detection Rule License).
+        $yargs = @('-C', '-r', '-w', '-f', '-m', '-a', '30', '-z', '52428800', $rules, $p)
         $output = & $y.Yara @yargs 2>&1
         foreach ($line in $output) {
             $text = "$line"
-            if ($text -match '^(?<rule>[A-Za-z0-9_]+) (?<file>.+)$' -and $text -notmatch '^(error|warning)') {
+            if ($text -match '^(error|warning)') { continue }
+            if ($text -match '^(?<rule>[A-Za-z0-9_]+) (\[(?<meta>.*)\] )?(?<file>[A-Za-z]:\\.+|\\\\.+)$') {
                 $found++
-                New-Finding -Category 'Malware' -Key "Malware:YARA:$($Matches.file)" `
-                    -Detail "YARA rule $($Matches.rule) matched (public rules can false-positive; review the file)"
+                $rule = $Matches.rule; $file = $Matches.file; $meta = $Matches.meta
+                $author = 'unknown'
+                if ($meta -and $meta -match 'author="(?<a>[^"]*)"') { $author = $Matches.a }
+                New-Finding -Category 'Malware' -Key "Malware:YARA:$file" `
+                    -Detail "YARA rule $rule (author: $author) matched; public rules can false-positive, review the file"
             }
         }
     }
