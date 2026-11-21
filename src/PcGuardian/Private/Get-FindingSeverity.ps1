@@ -18,6 +18,8 @@ function Get-FindingSeverity {
 
     if ($Finding.Key -like 'Admin:*') { return 'Alert' }
     if ($Finding.Category -eq 'Malware') { return 'Alert' }
+    if ($Finding.Key -like 'Exposure:Config:*') { return 'Alert' }
+    if ($Finding.Key -like 'Exposure:Update:*') { return 'Info' }
 
     if ($Finding.Category -eq 'Defender') {
         if ($detail -match 'RealTimeProtectionEnabled=False|IsTamperProtected=False') { return 'Alert' }

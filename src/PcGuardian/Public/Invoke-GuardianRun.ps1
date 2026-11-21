@@ -15,7 +15,9 @@ function Invoke-GuardianRun {
         [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'),
         [switch]$ResetBaseline,
         # Also scan high-risk locations with ClamAV. Detections are always reported, never baselined.
-        [switch]$Scan
+        [switch]$Scan,
+        # Also list apps with newer winget versions (needs network). Config exposure checks always run.
+        [switch]$CheckUpdates
     )
 
     New-Item -ItemType Directory -Force -Path $DataPath | Out-Null
@@ -35,9 +37,18 @@ function Invoke-GuardianRun {
     if ($Scan) {
         $scanFindings = @(Invoke-ClamAvScan -Path @(Get-ClamAvScanPath -Findings $current))
     }
-    $scanLines = @($scanFindings | ForEach-Object {
-        "[{0}] SCAN    {1} - {2}" -f (Get-FindingSeverity -Finding $_), $_.Key, $_.Detail
-    })
+    # Exposures are reported on every run too, for the same reason: a day-one weakness must not become "normal".
+    $exposureFindings = @(Get-ExposureAudit)
+    if ($CheckUpdates) { $exposureFindings += @(Get-AppUpdateAudit) }
+
+    $scanLines = @(
+        $scanFindings | ForEach-Object {
+            "[{0}] SCAN    {1} - {2}" -f (Get-FindingSeverity -Finding $_), $_.Key, $_.Detail
+        }
+        $exposureFindings | ForEach-Object {
+            "[{0}] EXPOSED {1} - {2}" -f (Get-FindingSeverity -Finding $_), $_.Key, $_.Detail
+        }
+    )
 
     if ($ResetBaseline -or -not (Test-Path $baselineFile)) {
         $current | ConvertTo-Json -Depth 4 | Set-Content -Path $baselineFile -Encoding UTF8
