@@ -5,7 +5,7 @@
     Author            = 'pc-guardian contributors'
     Description       = 'Read-only Windows security audit with baseline diffing. Orchestrates Microsoft Defender; not an antivirus engine.'
     PowerShellVersion = '5.1'
-    FunctionsToExport = @('Invoke-GuardianRun')
+    FunctionsToExport = @('Invoke-GuardianRun', 'Set-GuardianVirusTotalKey')
     CmdletsToExport   = @()
     VariablesToExport = @()
     AliasesToExport   = @()

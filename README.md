@@ -30,7 +30,9 @@ The first run creates a baseline. Run it again later to see what changed.
 
 ## Privacy and safety
 
-- Everything stays on your machine. No telemetry. No network calls from the audit.
+- Everything stays on your machine. No telemetry. The audit makes no network calls.
+- Optional network features are off by default: `-CheckUpdates` (winget sources) and `-VirusTotal`
+  (sends only file SHA-256 hashes to virustotal.com, never files or paths).
 - Read-only by default. Nothing is removed, quarantined or disabled.
 - Data is stored in `%LOCALAPPDATA%\PcGuardian` (override with `-DataPath`).
 

@@ -16,6 +16,9 @@ function Invoke-GuardianRun {
         [switch]$ResetBaseline,
         # Also scan high-risk locations with ClamAV and YARA. Detections are always reported, never baselined.
         [switch]$Scan,
+        # Opt-in: look up SHA-256 hashes (only hashes) of new unsigned executables on VirusTotal.
+        # Needs a key from Set-GuardianVirusTotalKey. Sends data to virustotal.com.
+        [switch]$VirusTotal,
         # Also list apps with newer winget versions (needs network). Config exposure checks always run.
         [switch]$CheckUpdates
     )
@@ -34,9 +37,14 @@ function Invoke-GuardianRun {
 
     # Malware detections are never part of the baseline: a threat present on the first run must not become "normal".
     $scanFindings = @()
-    if ($Scan) {
+    if ($Scan -or $VirusTotal) {
         $scanPaths = @(Get-ClamAvScanPath -Findings $current)
-        $scanFindings = @(Invoke-ClamAvScan -Path $scanPaths) + @(Invoke-YaraScan -Path $scanPaths)
+        if ($Scan) {
+            $scanFindings += @(Invoke-ClamAvScan -Path $scanPaths) + @(Invoke-YaraScan -Path $scanPaths)
+        }
+        if ($VirusTotal) {
+            $scanFindings += @(Invoke-VirusTotalCheck -Path $scanPaths -DataPath $DataPath)
+        }
     }
     # Exposures are reported on every run too, for the same reason: a day-one weakness must not become "normal".
     $exposureFindings = @(Get-ExposureAudit)

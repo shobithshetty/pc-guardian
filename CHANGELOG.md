@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Opt-in VirusTotal reputation lookup (`Invoke-GuardianRun -VirusTotal`): sends only the SHA-256 of recent,
+  unsigned executables, caches results by hash, and needs a key stored encrypted by `Set-GuardianVirusTotalKey`.
+  Three or more engines must flag a file before it becomes a finding.
 - YARA scan (`Invoke-GuardianRun -Scan`, alongside ClamAV): runs a pre-compiled public rule set from
   `%LOCALAPPDATA%\PcGuardian\yara`. Rule files that depend on Loki-style externals (filename, filepath,
   extension, filetype, owner) are excluded, because without real values they false-positive.
