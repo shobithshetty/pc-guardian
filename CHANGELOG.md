@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- YARA scan (`Invoke-GuardianRun -Scan`, alongside ClamAV): runs a pre-compiled public rule set from
+  `%LOCALAPPDATA%\PcGuardian\yara`. Rule files that depend on Loki-style externals (filename, filepath,
+  extension, filetype, owner) are excluded, because without real values they false-positive.
 - Exposure check: offline config audit (SMBv1, UAC, RDP, auto-logon, firewall profiles, Guest account,
   Defender real-time and signature age, stale Windows updates). Reported on every run, never baselined.
 - `Invoke-GuardianRun -CheckUpdates` lists apps with newer winget versions (read-only; needs network).

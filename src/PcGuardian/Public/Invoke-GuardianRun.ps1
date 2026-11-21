@@ -14,7 +14,7 @@ function Invoke-GuardianRun {
     param(
         [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'),
         [switch]$ResetBaseline,
-        # Also scan high-risk locations with ClamAV. Detections are always reported, never baselined.
+        # Also scan high-risk locations with ClamAV and YARA. Detections are always reported, never baselined.
         [switch]$Scan,
         # Also list apps with newer winget versions (needs network). Config exposure checks always run.
         [switch]$CheckUpdates
@@ -35,7 +35,8 @@ function Invoke-GuardianRun {
     # Malware detections are never part of the baseline: a threat present on the first run must not become "normal".
     $scanFindings = @()
     if ($Scan) {
-        $scanFindings = @(Invoke-ClamAvScan -Path @(Get-ClamAvScanPath -Findings $current))
+        $scanPaths = @(Get-ClamAvScanPath -Findings $current)
+        $scanFindings = @(Invoke-ClamAvScan -Path $scanPaths) + @(Invoke-YaraScan -Path $scanPaths)
     }
     # Exposures are reported on every run too, for the same reason: a day-one weakness must not become "normal".
     $exposureFindings = @(Get-ExposureAudit)
