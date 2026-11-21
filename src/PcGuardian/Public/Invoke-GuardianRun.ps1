@@ -13,7 +13,9 @@ function Invoke-GuardianRun {
     [CmdletBinding()]
     param(
         [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'),
-        [switch]$ResetBaseline
+        [switch]$ResetBaseline,
+        # Also scan high-risk locations with ClamAV. Detections are always reported, never baselined.
+        [switch]$Scan
     )
 
     New-Item -ItemType Directory -Force -Path $DataPath | Out-Null
@@ -28,11 +30,20 @@ function Invoke-GuardianRun {
         Get-AccountAudit
     )
 
+    # Malware detections are never part of the baseline: a threat present on the first run must not become "normal".
+    $scanFindings = @()
+    if ($Scan) {
+        $scanFindings = @(Invoke-ClamAvScan -Path @(Get-ClamAvScanPath -Findings $current))
+    }
+    $scanLines = @($scanFindings | ForEach-Object {
+        "[{0}] SCAN    {1} - {2}" -f (Get-FindingSeverity -Finding $_), $_.Key, $_.Detail
+    })
+
     if ($ResetBaseline -or -not (Test-Path $baselineFile)) {
         $current | ConvertTo-Json -Depth 4 | Set-Content -Path $baselineFile -Encoding UTF8
-        $msg = "Baseline saved with $($current.Count) findings at $baselineFile. Run again later to see changes."
+        $msg = @("Baseline saved with $($current.Count) findings at $baselineFile. Run again later to see changes.") + $scanLines
         $msg | Set-Content -Path $reportFile -Encoding UTF8
-        Write-Output $msg
+        $msg
         return
     }
 
@@ -47,6 +58,7 @@ function Invoke-GuardianRun {
         $lines += "[Info] REMOVED {0} - {1}" -f $f.Key, $f.Detail
     }
     if ($lines.Count -eq 3) { $lines += 'No changes since baseline.' }
+    $lines += $scanLines
 
     $lines | Set-Content -Path $reportFile -Encoding UTF8
     $lines

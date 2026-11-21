@@ -17,6 +17,7 @@ function Get-FindingSeverity {
     $detail = "$($Finding.Detail)"
 
     if ($Finding.Key -like 'Admin:*') { return 'Alert' }
+    if ($Finding.Category -eq 'Malware') { return 'Alert' }
 
     if ($Finding.Category -eq 'Defender') {
         if ($detail -match 'RealTimeProtectionEnabled=False|IsTamperProtected=False') { return 'Alert' }

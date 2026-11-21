@@ -9,6 +9,12 @@ Describe 'Get-FindingSeverity' {
             Get-FindingSeverity -Finding $f | Should -Be 'Alert'
         }
     }
+    It 'alerts on any malware detection' {
+        InModuleScope PcGuardian {
+            $f = [pscustomobject]@{ Category = 'Malware'; Key = 'Malware:C:\x.exe'; Detail = 'ClamAV detected Win.Test' }
+            Get-FindingSeverity -Finding $f | Should -Be 'Alert'
+        }
+    }
     It 'alerts on startup entries in AppData' {
         InModuleScope PcGuardian {
             $f = [pscustomobject]@{ Category = 'Startup'; Key = 'Startup:HKCU:x'; Detail = 'C:\Users\a\AppData\Roaming\x.exe' }
