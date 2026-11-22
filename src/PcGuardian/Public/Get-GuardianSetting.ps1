@@ -5,12 +5,14 @@ function Get-GuardianSetting {
     .DESCRIPTION
         Settings live in settings.json in the data folder. Current settings:
           virusTotal       look up hashes of new unsigned programs on VirusTotal during full scans (default off)
+          osv              check code projects' packages against osv.dev during full scans (default off)
+          devFolders       extra code folders to search for stray secrets and package lock files
         virusTotalKeySet is read-only and tells whether a key has been stored.
     #>
     [CmdletBinding()]
     param([string]$DataPath = (Get-GuardianDataPath))
 
-    $settings = [pscustomobject]@{ virusTotal = $false }
+    $settings = [pscustomobject]@{ virusTotal = $false; osv = $false; devFolders = @() }
     $file = Join-Path $DataPath 'settings.json'
     if (Test-Path $file) {
         try {
@@ -20,5 +22,6 @@ function Get-GuardianSetting {
             }
         } catch { Write-Verbose "settings.json could not be read; using defaults. $($_.Exception.Message)" }
     }
+    $settings.devFolders = @($settings.devFolders | Where-Object { $_ })
     $settings | Add-Member -NotePropertyName virusTotalKeySet -NotePropertyValue (Test-Path (Join-Path $DataPath 'vt.key')) -PassThru
 }

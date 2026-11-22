@@ -16,6 +16,29 @@ Describe 'Settings' {
         Set-GuardianSetting -Name virusTotal -Value $false -DataPath $d
         (Get-GuardianSetting -DataPath $d).virusTotal | Should -BeFalse
     }
+    It 'saves the osv setting without losing the others' {
+        $d = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid())
+        Set-GuardianSetting -Name virusTotal -Value $true -DataPath $d
+        Set-GuardianSetting -Name osv -Value $true -DataPath $d
+        $s = Get-GuardianSetting -DataPath $d
+        $s.virusTotal | Should -BeTrue
+        $s.osv | Should -BeTrue
+    }
+    It 'adds and removes code folders and keeps the other settings' {
+        $d = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid())
+        $code = Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid()); New-Item -ItemType Directory -Path $code | Out-Null
+        Set-GuardianSetting -Name osv -Value $true -DataPath $d
+        Add-GuardianDevFolder -Path $code -DataPath $d
+        Add-GuardianDevFolder -Path $code -DataPath $d      # duplicate is ignored
+        $s = Get-GuardianSetting -DataPath $d
+        @($s.devFolders).Count | Should -Be 1
+        $s.osv | Should -BeTrue
+        Remove-GuardianDevFolder -Path $code -DataPath $d
+        @((Get-GuardianSetting -DataPath $d).devFolders).Count | Should -Be 0
+    }
+    It 'refuses a folder that does not exist' {
+        { Add-GuardianDevFolder -Path 'Z:\no\such\folder' -DataPath (Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid())) } | Should -Throw '*does not exist*'
+    }
     It 'rejects unknown settings' {
         { Set-GuardianSetting -Name 'nothing' -Value $true -DataPath (NewDir) } | Should -Throw
     }

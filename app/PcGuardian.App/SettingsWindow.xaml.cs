@@ -58,6 +58,8 @@ public partial class SettingsWindow : Window
             var daily = await _engine.GetDailyScanAsync();
             var safe = await _engine.GetSafeItemsAsync();
 
+            OsvCheck.IsChecked = settings.Osv;
+            DevFolderList.ItemsSource = settings.DevFolders;
             VtCheck.IsChecked = settings.VirusTotal;
             VtStatus.Text = settings.VirusTotalKeySet ? "A key is saved (encrypted for your Windows account only)."
                 : settings.VirusTotal ? "Turned on, but no key is saved yet. Paste one above and press Save key."
@@ -83,6 +85,42 @@ public partial class SettingsWindow : Window
             await _engine.SetVirusTotalEnabledAsync(VtCheck.IsChecked == true);
             await LoadAsync();
             Notice.Text = "Saved.";
+        }
+        catch (Exception ex) { Notice.Text = ex.Message; }
+    }
+
+    private async void OsvCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        try
+        {
+            await _engine.SetOsvEnabledAsync(OsvCheck.IsChecked == true);
+            Notice.Text = "Saved.";
+        }
+        catch (Exception ex) { Notice.Text = ex.Message; }
+    }
+
+    private async void AddDevFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Choose a folder that holds your code projects" };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            await _engine.AddDevFolderAsync(dialog.FolderName);
+            await LoadAsync();
+            Notice.Text = "Folder added.";
+        }
+        catch (Exception ex) { Notice.Text = ex.Message; }
+    }
+
+    private async void RemoveDevFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string path }) return;
+        try
+        {
+            await _engine.RemoveDevFolderAsync(path);
+            await LoadAsync();
+            Notice.Text = "Folder removed.";
         }
         catch (Exception ex) { Notice.Text = ex.Message; }
     }

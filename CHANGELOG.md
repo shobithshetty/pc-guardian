@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Hiding-place checks in the baseline: background services, trusted root certificates (a user-installed one
+  is an alert), hosts-file entries, and browser extensions. Existing baselines absorb these once on upgrade
+  (`baseline-checks.json`) instead of reporting everything as new.
+- Always reported until marked safe (never baselined): Defender exclusions, WMI event consumers, and browser
+  extensions that combine all-sites access with cookies, web requests, native messaging or the debugger.
+- Full scans also look for stolen-credential risks and pasted-command (ClickFix) traces: plain-text tokens in
+  well-known files and `.env` files in your code folders (values never shown), SSH private keys without a
+  passphrase, and suspicious commands in the Run box and PowerShell history.
+- Optional package check against osv.dev, including known-malicious packages (package-lock.json and pinned
+  requirements.txt in your code folders; sends only names and versions). Off by default; Settings has a
+  code-folders list and the checkbox. `ConvertFrom-JsonDictionary` reads lockfiles with empty keys on 5.1 and 7.
 - Scan-complete signals: a result card (green, amber or red) that stays until dismissed, a taskbar flash if the
   window is in the background, and a remembered "Last full scan" line in the footer.
 - Data folder you can choose: the installer has a "Data folder" page (default: the standard Windows location).

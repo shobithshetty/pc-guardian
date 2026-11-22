@@ -26,7 +26,38 @@ function Get-FindingSeverity {
         return 'Info'
     }
 
-    if ($Finding.Category -in 'Startup', 'Task') {
+    # Hiding places: a new Defender exclusion or WMI consumer, a new user-installed root certificate, a hosts entry
+    # that redirects traffic elsewhere, or a risky browser extension, are all worth attention.
+    if ($Finding.Key -like 'Defender:Exclusion:*' -or $Finding.Key -like 'WMI:*') { return 'Alert' }
+    if ($Finding.Category -eq 'Certificate') {
+        if ($detail -match 'user-installed') { return 'Alert' }
+        return 'Info'
+    }
+    if ($Finding.Category -eq 'Hosts') {
+        if ($detail -match 'points to (127\.0\.0\.1|0\.0\.0\.0|::1)$') { return 'Info' }
+        return 'Alert'
+    }
+    if ($Finding.Category -in 'Extension', 'ExtensionRisk') {
+        if ($detail -match 'risky permissions') { return 'Alert' }
+        return 'Info'
+    }
+    # Traces of pasted-command attacks: only the clearly suspicious ones are alerts.
+    if ($Finding.Category -eq 'ClickFix') {
+        if ($detail -match 'suspicious:') { return 'Alert' }
+        return 'Info'
+    }
+    # Plain-text secrets are what supply-chain worms and infostealers steal; an unprotected SSH key is a lesser risk.
+    if ($Finding.Category -eq 'Credential') {
+        if ($Finding.Key -like 'Credential:SshKey:*') { return 'Info' }
+        return 'Alert'
+    }
+    # A known-malicious package is an alert; ordinary advisories are informational.
+    if ($Finding.Category -eq 'Package') {
+        if ($Finding.Key -like 'Package:Malicious:*') { return 'Alert' }
+        return 'Info'
+    }
+
+    if ($Finding.Category -in 'Startup', 'Task', 'Service') {
         if ($detail -match '\\AppData\\|\\Temp\\|\\Downloads\\|\\Users\\Public\\') { return 'Alert' }
         if ($detail -match '(?i)(powershell|pwsh|wscript|cscript|mshta|rundll32).*(-enc|-encodedcommand|-w(indowstyle)?\s+hidden|http)') { return 'Alert' }
     }

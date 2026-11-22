@@ -43,8 +43,10 @@ The first run creates a baseline. Run it again later to see what changed.
 ## Privacy and safety
 
 - Everything stays on your machine. No telemetry. The audit makes no network calls.
-- Optional network features are off by default: `-CheckUpdates` (winget sources) and `-VirusTotal`
-  (sends only file SHA-256 hashes to virustotal.com, never files or paths).
+- Optional network features are off by default: `-CheckUpdates` (winget sources), `-VirusTotal`
+  (sends only file SHA-256 hashes to virustotal.com, never files or paths) and `-CheckPackages`
+  (sends only package names and versions to api.osv.dev).
+- Secret scanning is local only. Findings name a file and a kind of secret; the value is never shown or stored.
 - Read-only by default. Nothing is removed, quarantined or disabled.
 - Data is stored in `%LOCALAPPDATA%\PcGuardian`. Choose another drive on the installer's "Data folder" page, or
   set the user environment variable `PCGUARDIAN_DATA` to any folder (the engine also accepts `-DataPath`).

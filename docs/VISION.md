@@ -38,6 +38,9 @@ Licences below are my understanding and **must be verified before any source is 
 | Microsoft Defender state | Is protection on, are definitions fresh | In use (read-only) |
 | VirusTotal | Hash reputation lookups | In use, opt-in, bring your own key |
 | Exposure checks | Risky Windows settings (SMBv1, RDP, UAC...) | In use |
+| Hiding-place checks | Services, root certificates, hosts file, Defender exclusions, WMI, browser extensions | In use |
+| ClickFix and credential checks | Pasted-command traces; plain-text tokens and unprotected SSH keys | In use |
+| OSV (osv.dev) | Known-malicious and vulnerable packages in lockfiles | In use, opt-in (terms to verify before release) |
 | abuse.ch feeds (MalwareBazaar, URLhaus, ThreatFox) | Known-bad hashes, URLs, indicators | To evaluate (terms to verify) |
 | Sigma rules | Suspicious activity in Windows event logs | To evaluate (licence to verify) |
 | YARA Forge or other consolidated YARA sets | More rules, already de-duplicated | To evaluate (licence to verify) |

@@ -49,6 +49,8 @@ public sealed class AppSettings
 {
     public bool VirusTotal { get; set; }
     public bool VirusTotalKeySet { get; set; }
+    public bool Osv { get; set; }
+    public List<string> DevFolders { get; set; } = new();
 }
 
 /// <summary>Get-GuardianDailyScan: the scheduled daily scan task.</summary>

@@ -82,6 +82,16 @@ public sealed class GuardianEngine
         RunVoidAsync("Set-GuardianSetting -Name virusTotal -Value ([bool]::Parse($env:PCG_VALUE))",
             new() { ["PCG_VALUE"] = enabled ? "true" : "false" }, ct);
 
+    public Task SetOsvEnabledAsync(bool enabled, CancellationToken ct = default) =>
+        RunVoidAsync("Set-GuardianSetting -Name osv -Value ([bool]::Parse($env:PCG_VALUE))",
+            new() { ["PCG_VALUE"] = enabled ? "true" : "false" }, ct);
+
+    public Task AddDevFolderAsync(string path, CancellationToken ct = default) =>
+        RunVoidAsync("Add-GuardianDevFolder -Path $env:PCG_PATH", new() { ["PCG_PATH"] = path }, ct);
+
+    public Task RemoveDevFolderAsync(string path, CancellationToken ct = default) =>
+        RunVoidAsync("Remove-GuardianDevFolder -Path $env:PCG_PATH", new() { ["PCG_PATH"] = path }, ct);
+
     /// <summary>The key travels in an environment variable, never in the command line.</summary>
     public Task SetVirusTotalKeyAsync(string key, CancellationToken ct = default) =>
         RunVoidAsync("Set-GuardianVirusTotalKey -Key (ConvertTo-SecureString $env:PCG_VTKEY -AsPlainText -Force) | Out-Null",
