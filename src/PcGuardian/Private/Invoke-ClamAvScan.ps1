@@ -47,8 +47,15 @@ function Invoke-ClamAvScan {
         return New-Finding -Category 'Scanner' -Key 'ClamAV:NoDatabase' -Detail 'ClamAV virus database missing; run freshclam first.'
     }
 
+    # Count the files first so the app can show a real percentage instead of a number that only grows.
+    Write-GuardianProgress -Type file -Value 'Counting the files to scan...'
+    $total = 0
+    foreach ($p in $Path) {
+        if (Test-Path -LiteralPath $p -PathType Leaf) { $total++ }
+        else { $total += @(Get-ChildItem -LiteralPath $p -Recurse -File -ErrorAction SilentlyContinue).Count }
+    }
     # ClamAV loads about 3 million signatures before the first file, which takes ~30 seconds.
-    Write-GuardianProgress -Type file -Value 'Loading virus signatures (about 30 seconds)...'
+    Write-GuardianProgress -Type file -Value "Loading virus signatures for $($total.ToString('N0')) files (about 30 seconds)..."
     # No --infected: clamscan then prints every file it checks ("path: OK"), which lets the app show live progress.
     $scanArgs = @('--database', $db, '--recursive', '--no-summary', '--max-filesize=100M') + $Path
 
@@ -75,6 +82,8 @@ function Invoke-ClamAvScan {
             if ($done % 10 -eq 0) {
                 Write-GuardianProgress -Type file -Value $Matches.file
                 Write-GuardianProgress -Type count -Value $done
+                # Never show 100% until clamscan itself has finished; the count is an estimate.
+                if ($total -gt 0) { Write-GuardianProgress -Type percent -Value ([int][math]::Min(99, [math]::Floor($done * 100 / $total))) }
             }
         }
     }

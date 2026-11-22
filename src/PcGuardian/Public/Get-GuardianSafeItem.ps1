@@ -4,7 +4,7 @@ function Get-GuardianSafeItem {
         Lists the findings you marked as safe. They stop being reported as new.
     #>
     [CmdletBinding()]
-    param([string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'))
+    param([string]$DataPath = (Get-GuardianDataPath))
 
     $file = Join-Path $DataPath 'safe.json'
     if (-not (Test-Path $file)) { return @() }

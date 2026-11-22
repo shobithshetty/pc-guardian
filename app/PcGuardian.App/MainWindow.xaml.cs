@@ -20,6 +20,9 @@ public partial class MainWindow : Window
     private ScannerStatus? _scanner;
     private bool _working;
     private int _fileCount;
+    private int _phase, _phaseTotal;
+    private int _percent = -1;   // percent done within the current step; -1 when the amount of work is unknown
+    private int _maxFiles;       // most files any step reported checking; shown in the scan result
 
     public MainWindow(GuardianEngine engine)
     {
@@ -37,7 +40,11 @@ public partial class MainWindow : Window
         };
         Loaded += async (_, _) =>
         {
+            StatusText.Text = LastScan.Load()?.Describe() ?? "No full scan yet. Press Scan now to run one.";
             await RefreshScannerStatusAsync();
+            // The installer's "set up virus scanning" box leaves a flag: the person already agreed, so start now.
+            if (_scanner is { Ready: false } && ConsumeAutoSetupFlag())
+                await RunSetupAsync(installClamAv: !_scanner.ClamAvInstalled, clamAvOnly: false);
             await RunScanAsync(deep: false);
         };
     }
@@ -71,6 +78,51 @@ public partial class MainWindow : Window
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    // ---- Finished-work signals --------------------------------------------------------------------------------
+
+    /// <summary>A card that says what just finished and stays until dismissed. Tone is Good, Warn or Bad.</summary>
+    private void ShowResultCard(string title, string detail, string tone)
+    {
+        ResultTitle.Text = title;
+        ResultDetail.Text = detail;
+        ResultDot.SetResourceReference(Shape.FillProperty, tone);
+        ResultCard.SetResourceReference(Border.BorderBrushProperty, tone);
+        ResultTitle.SetResourceReference(TextBlock.ForegroundProperty, tone);
+        ResultCard.Visibility = Visibility.Visible;
+    }
+
+    private void DismissResult_Click(object sender, RoutedEventArgs e) => ResultCard.Visibility = Visibility.Collapsed;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FlashInfo
+    {
+        public uint Size; public IntPtr Window; public uint Flags; public uint Count; public uint Timeout;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool FlashWindowEx(ref FlashInfo info);
+
+    /// <summary>If the window is behind other apps, flash its taskbar button until the person brings it back.</summary>
+    private void FlashIfInactive()
+    {
+        if (IsActive) return;
+        var info = new FlashInfo
+        {
+            Size = (uint)Marshal.SizeOf<FlashInfo>(), Window = new WindowInteropHelper(this).Handle,
+            Flags = 0x0F,   // flash the taskbar button and caption until the window is in front
+            Count = uint.MaxValue, Timeout = 0,
+        };
+        FlashWindowEx(ref info);
+    }
+
+    private static bool ConsumeAutoSetupFlag()
+    {
+        var flag = System.IO.Path.Combine(AppPaths.DataDir, "auto-setup.flag");
+        if (!System.IO.File.Exists(flag)) return false;
+        try { System.IO.File.Delete(flag); } catch { /* if it cannot be deleted, it only means a second prompt */ }
+        return true;
+    }
 
     // ---- Protection data (scanners) ---------------------------------------------------------------------------
 
@@ -120,6 +172,9 @@ public partial class MainWindow : Window
             await _engine.SetupScannersAsync(installClamAv, clamAvOnly, new Progress<ProgressEvent>(OnProgress), _cts.Token);
             Bar.Value = 1;
             StatusText.Text = "Protection data ready (" + FormatElapsed(_elapsed.Elapsed) + ")";
+            ShowResultCard("Protection data is ready",
+                $"Virus signatures and YARA rules are installed and up to date ({FormatElapsed(_elapsed.Elapsed)}).", "Good");
+            FlashIfInactive();
             ok = true;
         }
         catch (OperationCanceledException)
@@ -177,6 +232,7 @@ public partial class MainWindow : Window
         _cts = new CancellationTokenSource();
         _fileCount = 0;
         SetWorking(true);
+        _maxFiles = 0;
         StepText.Text = deep ? "Starting a full scan..." : "Checking for changes...";
         CurrentText.Text = "";
         Bar.Value = 0;
@@ -192,8 +248,27 @@ public partial class MainWindow : Window
             foreach (var f in result.Items.OrderByDescending(i => i.IsMalware).ThenByDescending(i => i.IsAlert))
                 _items.Add(f);
             UpdateHeadline(result.FirstRun ? $"Baseline saved with {result.BaselineCount} items. Later checks show what changes." : null);
-            StatusText.Text = (deep ? "Full scan" : "Quick check") + " finished at " + DateTime.Now.ToString("t") +
-                              " (" + FormatElapsed(_elapsed.Elapsed) + ")";
+            var threats = result.Items.Count(i => i.IsMalware);
+            var review = result.Items.Count - threats;
+            if (deep)
+            {
+                // Make the end of a full scan impossible to miss, and remember it for next time.
+                var last = new LastScan { Time = DateTime.Now, Files = _maxFiles, Seconds = (int)_elapsed.Elapsed.TotalSeconds, Threats = threats, Review = review };
+                last.Save();
+                StatusText.Text = last.Describe();
+                var files = _maxFiles > 0 ? $"{_maxFiles:N0} files checked" : "No files were scanned by ClamAV (see the list)";
+                ShowResultCard(
+                    threats > 0 ? "Scan complete: possible threats found"
+                    : review > 0 ? "Scan complete: no threats, a few items to review"
+                    : "Scan complete: no threats found",
+                    $"{files} in {FormatElapsed(_elapsed.Elapsed)}  ·  {threats} possible threat{(threats == 1 ? "" : "s")}  ·  {review} item{(review == 1 ? "" : "s")} to review",
+                    threats > 0 ? "Bad" : review > 0 ? "Warn" : "Good");
+                FlashIfInactive();
+            }
+            else
+            {
+                StatusText.Text = LastScan.Load()?.Describe() ?? "Quick check finished at " + DateTime.Now.ToString("t");
+            }
         }
         catch (OperationCanceledException)
         {
@@ -227,16 +302,26 @@ public partial class MainWindow : Window
                 if (parts.Length == 3 && int.TryParse(parts[0], out var n) && int.TryParse(parts[1], out var total))
                 {
                     _fileCount = 0;
+                    _percent = -1;
+                    _phase = n;
+                    _phaseTotal = total;
                     StepText.Text = $"Step {n} of {total}: {parts[2]}";
-                    Bar.Value = total == 0 ? 0 : (n - 1) / (double)total;
+                    SetBar();
                     CurrentText.Text = "";
+                }
+                break;
+            case "percent":
+                if (int.TryParse(p.Value, out var pct))
+                {
+                    _percent = Math.Clamp(pct, 0, 100);
+                    SetBar();
                 }
                 break;
             case "file":
                 CurrentText.Text = p.Value;
                 break;
             case "count":
-                if (int.TryParse(p.Value, out var c)) _fileCount = c;
+                if (int.TryParse(p.Value, out var c)) { _fileCount = c; _maxFiles = Math.Max(_maxFiles, c); }
                 break;
             case "found":
                 var item = GuardianEngine.ParseFound(p.Value);
@@ -250,10 +335,19 @@ public partial class MainWindow : Window
         UpdateStats();
     }
 
+    /// <summary>Overall bar = finished steps plus the percent done inside the current step, out of all steps.</summary>
+    private void SetBar()
+    {
+        if (_phaseTotal <= 0) { Bar.Value = 0; return; }
+        var within = _percent < 0 ? 0 : _percent / 100.0;
+        Bar.Value = Math.Min(1.0, ((_phase - 1) + within) / _phaseTotal);
+    }
+
     private void UpdateStats()
     {
         if (!_working) return;
         var text = "Elapsed " + FormatElapsed(_elapsed.Elapsed);
+        if (_percent >= 0) text += $"  ·  {_percent}% of this step";
         if (_fileCount > 0) text += $"  ·  {_fileCount:N0} files checked";
         if (_items.Count > 0) text += $"  ·  {_items.Count} finding{(_items.Count == 1 ? "" : "s")} so far";
         StatsText.Text = text;
@@ -268,7 +362,7 @@ public partial class MainWindow : Window
         ScanButton.IsEnabled = !working;
         SetupButton.IsEnabled = !working;
         CancelButton.IsEnabled = working;
-        if (working) { _elapsed.Restart(); _clock.Start(); }
+        if (working) { ResultCard.Visibility = Visibility.Collapsed; _elapsed.Restart(); _clock.Start(); }
         else { _elapsed.Stop(); _clock.Stop(); }
         EmptyText.Visibility = !working && _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }

@@ -5,7 +5,7 @@ function Get-VirusTotalKey {
         key file written by Set-GuardianVirusTotalKey (readable only by this Windows user on this PC).
     #>
     [CmdletBinding()]
-    param([string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'))
+    param([string]$DataPath = (Get-GuardianDataPath))
 
     if ($env:PCGUARDIAN_VT_KEY) { return $env:PCGUARDIAN_VT_KEY }
     $file = Join-Path $DataPath 'vt.key'

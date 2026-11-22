@@ -68,6 +68,23 @@
                 </DockPanel>
             </Border>
 
+            <!-- Shown when a scan or download finishes, and stays until dismissed -->
+            <Border x:Name="ResultCard" Style="{StaticResource Card}" Padding="20" Margin="0,12,0,0" Visibility="Collapsed" BorderThickness="2">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Dismiss" Style="{StaticResource SoftButton}" Padding="14,5" VerticalAlignment="Center" Click="DismissResult_Click"/>
+                    <Viewbox DockPanel.Dock="Left" Width="40" Height="40" Margin="0,0,16,0">
+                        <Canvas Width="24" Height="24">
+                            <Ellipse x:Name="ResultDot" Width="24" Height="24" Fill="{DynamicResource Good}"/>
+                            <Polyline Points="7,12.5 10.5,16 17,8.5" Stroke="White" StrokeThickness="2.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                        </Canvas>
+                    </Viewbox>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="ResultTitle" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="ResultDetail" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
             <!-- Live progress for scans and downloads -->
             <Border x:Name="ProgressCard" Style="{StaticResource Card}" Padding="20" Margin="0,12,0,0" Visibility="Collapsed">
                 <StackPanel>

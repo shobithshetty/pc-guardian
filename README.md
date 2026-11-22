@@ -46,7 +46,8 @@ The first run creates a baseline. Run it again later to see what changed.
 - Optional network features are off by default: `-CheckUpdates` (winget sources) and `-VirusTotal`
   (sends only file SHA-256 hashes to virustotal.com, never files or paths).
 - Read-only by default. Nothing is removed, quarantined or disabled.
-- Data is stored in `%LOCALAPPDATA%\PcGuardian` (override with `-DataPath`).
+- Data is stored in `%LOCALAPPDATA%\PcGuardian`. Choose another drive on the installer's "Data folder" page, or
+  set the user environment variable `PCGUARDIAN_DATA` to any folder (the engine also accepts `-DataPath`).
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [SECURITY.md](SECURITY.md).
 

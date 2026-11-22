@@ -11,7 +11,7 @@ function Find-ClamAv {
     ) | Where-Object { $_ -and (Test-Path $_) }
 
     # Definitions live in pc-guardian's own data folder so updating them never needs admin rights.
-    $userDb = Join-Path $env:LOCALAPPDATA 'PcGuardian\clamav-db'
+    $userDb = Join-Path (Get-GuardianDataPath) 'clamav-db'
 
     foreach ($d in $dirs) {
         $scan = Join-Path $d 'clamscan.exe'

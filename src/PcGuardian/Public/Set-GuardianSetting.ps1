@@ -7,7 +7,7 @@ function Set-GuardianSetting {
     param(
         [Parameter(Mandatory)][ValidateSet('virusTotal')][string]$Name,
         [Parameter(Mandatory)][bool]$Value,
-        [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian')
+        [string]$DataPath = (Get-GuardianDataPath)
     )
 
     New-Item -ItemType Directory -Force -Path $DataPath | Out-Null

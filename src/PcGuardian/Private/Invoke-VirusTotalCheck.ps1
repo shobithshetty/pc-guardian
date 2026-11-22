@@ -49,7 +49,7 @@ function Invoke-VirusTotalCheck {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string[]]$Path,
-        [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'),
+        [string]$DataPath = (Get-GuardianDataPath),
         [int]$MinDetections = 3,
         [int]$MaxFiles = 25,
         [int]$DelaySeconds = 16

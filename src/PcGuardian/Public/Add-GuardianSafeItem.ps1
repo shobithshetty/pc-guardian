@@ -9,7 +9,7 @@ function Add-GuardianSafeItem {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipelineByPropertyName)][string]$Key,
-        [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian')
+        [string]$DataPath = (Get-GuardianDataPath)
     )
     process {
         if ($Key -like 'Malware:*') { throw 'Malware detections cannot be marked safe.' }

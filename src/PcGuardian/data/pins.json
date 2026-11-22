@@ -8,6 +8,7 @@
   "rules": {
     "repo": "Neo23x0/signature-base",
     "commit": "78d979eef87786a613659ee82e55abdd45572a78",
+    "approxBytes": 2237836,
     "contentSha256": "1a27e13fa4dc31fad94f5514f970f3e89a1b9c5e2a876c4d77abc2a926eb2eed"
   }
 }

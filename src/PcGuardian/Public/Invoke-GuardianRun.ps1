@@ -6,7 +6,7 @@ function Invoke-GuardianRun {
         First run saves a baseline. Later runs report findings that are new or removed since the baseline.
         Nothing on the system is modified; only files under -DataPath are written.
     .PARAMETER DataPath
-        Where baseline.json, safe.json and last-report.txt are stored. Default: %LOCALAPPDATA%\PcGuardian
+        Where baseline.json, safe.json and last-report.txt are stored. Default: the pc-guardian data folder (%LOCALAPPDATA%\PcGuardian, or PCGUARDIAN_DATA)
     .PARAMETER ResetBaseline
         Replace the baseline with the current snapshot.
     .PARAMETER AsObject
@@ -14,7 +14,7 @@ function Invoke-GuardianRun {
     #>
     [CmdletBinding()]
     param(
-        [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'),
+        [string]$DataPath = (Get-GuardianDataPath),
         [switch]$ResetBaseline,
         # Also scan high-risk locations with ClamAV and YARA. Detections are always reported, never baselined.
         [switch]$Scan,

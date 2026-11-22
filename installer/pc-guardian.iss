@@ -31,8 +31,7 @@ UninstallDisplayName=pc-guardian
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"
-Name: "installclamav"; Description: "Install ClamAV, the open-source second virus scanner (from the official winget package)"; GroupDescription: "Protection:"
-Name: "downloaddata"; Description: "Download protection data now (virus signatures and rules, about 110 MB)"; GroupDescription: "Protection:"
+Name: "firstrunsetup"; Description: "Set up virus scanning when pc-guardian first opens (installs ClamAV if needed and downloads about 110 MB, with a progress bar)"; GroupDescription: "Protection:"
 Name: "dailyscan"; Description: "Run a full scan every day at 2:00 AM (read-only) and refresh the virus database first"; GroupDescription: "Protection:"
 
 [Files]
@@ -44,19 +43,30 @@ Name: "{autoprograms}\pc-guardian"; Filename: "{app}\PcGuardian.exe"
 Name: "{autodesktop}\pc-guardian"; Filename: "{app}\PcGuardian.exe"; Tasks: desktopicon
 
 [Run]
-; 1. ClamAV program (needs administrator, which this installer already has). A failure here is not fatal.
+; 0. The data folder is the standard Windows location unless another one is chosen on the "Data folder" page.
+;    A custom choice is remembered for the person who started setup (not an elevated account) as the user
+;    environment variable PCGUARDIAN_DATA, which the app, the engine and the daily task all read.
+;    Choosing the standard location again clears it.
 Filename: "powershell.exe"; \
-  Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""winget install --id Cisco.ClamAV --exact --silent --accept-package-agreements --accept-source-agreements"""; \
-  Flags: runhidden waituntilterminated; Tasks: installclamav; StatusMsg: "Installing ClamAV..."
-; 2. Protection data, written to the profile of the person who started setup (not an elevated account).
+  Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""[Environment]::SetEnvironmentVariable('PCGUARDIAN_DATA', '{code:GetDataDir}', 'User')"""; \
+  Flags: runhidden waituntilterminated runasoriginaluser; Check: DataDirIsCustom
 Filename: "powershell.exe"; \
-  Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""Import-Module '{app}\module\PcGuardian\PcGuardian.psd1' -Force; Install-GuardianScanner"""; \
-  Flags: runhidden waituntilterminated runasoriginaluser; Tasks: downloaddata; StatusMsg: "Downloading protection data (this can take a few minutes)..."
-; 3. Daily scan task.
+  Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""[Environment]::SetEnvironmentVariable('PCGUARDIAN_DATA', $null, 'User')"""; \
+  Flags: runhidden waituntilterminated runasoriginaluser; Check: not DataDirIsCustom
+; 1. The big downloads happen inside the app, which shows a real progress bar. Here we only leave a note
+;    (in the data folder, as the person who started setup, not an elevated account) saying they agreed to it.
+Filename: "powershell.exe"; \
+  Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$d = '{code:GetDataDir}'; New-Item -ItemType Directory -Force $d | Out-Null; Set-Content -Path (Join-Path $d 'auto-setup.flag') -Value 'yes'"""; \
+  Flags: runhidden waituntilterminated runasoriginaluser; Tasks: firstrunsetup
+; 2. Daily scan task.
 Filename: "powershell.exe"; \
   Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\Install.ps1"" -ModulePath ""{app}\module\PcGuardian\PcGuardian.psd1"""; \
   Flags: runhidden waituntilterminated; Tasks: dailyscan; StatusMsg: "Scheduling the daily scan..."
-Filename: "{app}\PcGuardian.exe"; Description: "Open pc-guardian"; Flags: nowait postinstall skipifsilent
+; The app is started through cmd so it sees the chosen data folder right away (a running installer does not
+; see the environment change it just made).
+Filename: "cmd.exe"; \
+  Parameters: "/c set ""PCGUARDIAN_DATA={code:GetDataDir}"" && start """" ""{app}\PcGuardian.exe"""; \
+  Description: "Open pc-guardian"; Flags: runhidden nowait postinstall skipifsilent
 
 [UninstallRun]
 Filename: "powershell.exe"; \
@@ -64,6 +74,30 @@ Filename: "powershell.exe"; \
   Flags: runhidden waituntilterminated; RunOnceId: "RemoveDailyScan"
 
 [Code]
+var
+  DataDirPage: TInputDirWizardPage;
+
+// A page that asks where pc-guardian should keep its data. The default is the standard Windows location.
+procedure InitializeWizard();
+begin
+  DataDirPage := CreateInputDirPage(wpSelectDir, 'Data folder', 'Where should pc-guardian keep its data?',
+    'Virus signatures, rules, settings and your safe list are stored here (about 110 MB). ' +
+    'The default is the standard Windows location. To keep everything on another drive, choose a folder there.',
+    False, '');
+  DataDirPage.Add('');
+  DataDirPage.Values[0] := ExpandConstant('{localappdata}\PcGuardian');
+end;
+
+function GetDataDir(Param: String): String;
+begin
+  Result := RemoveBackslashUnlessRoot(DataDirPage.Values[0]);
+end;
+
+function DataDirIsCustom(): Boolean;
+begin
+  Result := CompareText(GetDataDir(''), ExpandConstant('{localappdata}\PcGuardian')) <> 0;
+end;
+
 // The app needs the .NET 8 Desktop Runtime. Some installs do not write the registry key, so the
 // runtime folder is the main check and the registry is a fallback.
 function HasDotNet8DesktopFolder(): Boolean;

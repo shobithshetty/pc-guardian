@@ -4,11 +4,12 @@ function Write-GuardianProgress {
         Emits one machine-readable progress line, only when the app asked for progress (-Progress).
     .DESCRIPTION
         Lines look like  PCG|<type>|<value>  and are read by the Windows app as they arrive.
-        Types: phase (n|total|name), file (current item), count (items done), found (one finding as JSON).
+        Types: phase (n|total|name), file (current item), count (items done), percent (0-100 within the current
+        step, only when the amount of work is known), found (one finding as JSON).
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][ValidateSet('phase', 'file', 'count', 'found')][string]$Type,
+        [Parameter(Mandatory)][ValidateSet('phase', 'file', 'count', 'percent', 'found')][string]$Type,
         [Parameter(Mandatory)][string[]]$Value
     )
     if ($script:ProgressEnabled) {

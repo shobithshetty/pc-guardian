@@ -15,7 +15,7 @@ function Set-GuardianVirusTotalKey {
     param(
         [securestring]$Key,
         [switch]$Remove,
-        [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian')
+        [string]$DataPath = (Get-GuardianDataPath)
     )
 
     $file = Join-Path $DataPath 'vt.key'

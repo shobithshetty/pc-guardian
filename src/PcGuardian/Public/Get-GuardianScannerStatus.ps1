@@ -7,7 +7,7 @@ function Get-GuardianScannerStatus {
         first scan and whether the database should be refreshed.
     #>
     [CmdletBinding()]
-    param([string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'))
+    param([string]$DataPath = (Get-GuardianDataPath))
 
     $clam = Find-ClamAv
     $yara = Find-Yara

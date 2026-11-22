@@ -29,7 +29,7 @@ function Install-GuardianScanner {
         [switch]$Yara,
         [switch]$InstallClamAv,
         [switch]$Progress,
-        [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian')
+        [string]$DataPath = (Get-GuardianDataPath)
     )
 
     if (-not ($ClamAv -or $Yara)) { $ClamAv = $true; $Yara = $true }
@@ -71,7 +71,17 @@ function Install-GuardianScanner {
             New-Item -ItemType Directory -Force -Path $db | Out-Null
             Set-Content -Path $conf -Encoding ASCII -Value @("DatabaseDirectory $db", 'DatabaseMirror database.clamav.net')
             Write-GuardianProgress -Type file -Value 'Downloading virus signatures (about 100 MB the first time)'
-            & $c.FreshClam "--config-file=$conf"
+            # freshclam prints "... 12.30MiB/84.95MiB" while it downloads; turn that into a percent for the bar.
+            $unit = @{ K = 1KB; M = 1MB; G = 1GB }
+            & $c.FreshClam "--config-file=$conf" 2>&1 | ForEach-Object {
+                $line = "$_"
+                Write-Host $line
+                if ($line -match '(?<done>[\d.]+)(?<du>[KMG])iB/(?<tot>[\d.]+)(?<tu>[KMG])iB') {
+                    $d = [double]$Matches.done * $unit[$Matches.du]
+                    $t = [double]$Matches.tot * $unit[$Matches.tu]
+                    if ($t -gt 0) { Write-GuardianProgress -Type percent -Value ([int][math]::Min(100, [math]::Floor($d * 100 / $t))) }
+                }
+            }
             if ($LASTEXITCODE -ne 0) { Write-Warning "freshclam exited with code $LASTEXITCODE" }
         }
     }
@@ -90,7 +100,7 @@ function Install-GuardianScanner {
             Start-GuardianPhase -Name "Downloading the YARA program ($($pins.yara.version))"
             $zip = Join-Path $tmp $pins.yara.asset
             $url = 'https://github.com/VirusTotal/yara/releases/download/{0}/{1}' -f $pins.yara.version, $pins.yara.asset
-            Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+            Save-GuardianDownload -Uri $url -OutFile $zip -Label 'YARA program'
             $got = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($got -ne $pins.yara.sha256) { throw "YARA download does not match the pinned SHA-256 (expected $($pins.yara.sha256), got $got). Nothing was installed." }
             Write-GuardianProgress -Type file -Value 'Checked the download against its pinned hash'
@@ -101,7 +111,7 @@ function Install-GuardianScanner {
             Start-GuardianPhase -Name 'Downloading the public YARA rules'
             Write-GuardianProgress -Type file -Value "Neo23x0/signature-base at commit $($pins.rules.commit.Substring(0,8))"
             $rzip = Join-Path $tmp 'rules.zip'
-            Invoke-WebRequest -Uri ('https://github.com/{0}/archive/{1}.zip' -f $pins.rules.repo, $pins.rules.commit) -OutFile $rzip -UseBasicParsing
+            Save-GuardianDownload -Uri ('https://github.com/{0}/archive/{1}.zip' -f $pins.rules.repo, $pins.rules.commit) -OutFile $rzip -Label 'Detection rules' -ExpectedBytes ([long]$pins.rules.approxBytes)
             $rx = Join-Path $tmp 'rules-x'
             Expand-Archive -Path $rzip -DestinationPath $rx -Force
             $srcDir = Get-ChildItem -Path $rx -Recurse -Directory | Where-Object { $_.FullName -like '*\yara' } | Select-Object -First 1

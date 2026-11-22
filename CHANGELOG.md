@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Scan-complete signals: a result card (green, amber or red) that stays until dismissed, a taskbar flash if the
+  window is in the background, and a remembered "Last full scan" line in the footer.
+- Data folder you can choose: the installer has a "Data folder" page (default: the standard Windows location).
+  A custom choice is stored as the user environment variable `PCGUARDIAN_DATA`; the engine (`Get-GuardianDataPath`),
+  the app, the scheduled scan and Settings all follow it. Settings shows the folder and can open it.
+- Real percentage progress bars: downloads report percent from the file size (YARA program, rules, ClamAV
+  database), and the ClamAV file scan counts files first, so the bar fills as the scan advances. New `percent`
+  progress event; downloads use a streaming client (`Save-GuardianDownload`).
+- The installer no longer downloads in a hidden step with no progress. Its box now means "set up virus scanning
+  when pc-guardian first opens"; the app then does the downloads with its progress card.
 - Logo and menus: a shield app icon (window, .exe, installer; regenerate with `tools/New-AppIcon.ps1` or replace
   `Assets/pc-guardian.ico`), and a File / View / Help menu bar.
 - Settings window (File > Settings, Ctrl+,): daily scan on/off and time, optional VirusTotal (off by default) with

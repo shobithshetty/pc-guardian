@@ -1,11 +1,11 @@
 function Find-Yara {
     <#
     .SYNOPSIS
-        Locates yara64.exe and the compiled rule set in %LOCALAPPDATA%\PcGuardian\yara. $null if missing.
+        Locates yara64.exe and the compiled rule set in <data folder>\yara. $null if missing.
     #>
     [CmdletBinding()]
     param()
-    $base = Join-Path $env:LOCALAPPDATA 'PcGuardian\yara'
+    $base = Join-Path (Get-GuardianDataPath) 'yara'
     $exe  = Join-Path $base 'bin\yara64.exe'
     if (-not (Test-Path $exe)) { return $null }
     [pscustomobject]@{

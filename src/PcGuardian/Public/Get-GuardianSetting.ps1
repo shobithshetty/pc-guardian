@@ -8,7 +8,7 @@ function Get-GuardianSetting {
         virusTotalKeySet is read-only and tells whether a key has been stored.
     #>
     [CmdletBinding()]
-    param([string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian'))
+    param([string]$DataPath = (Get-GuardianDataPath))
 
     $settings = [pscustomobject]@{ virusTotal = $false }
     $file = Join-Path $DataPath 'settings.json'

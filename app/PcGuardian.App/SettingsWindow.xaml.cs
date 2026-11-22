@@ -17,6 +17,7 @@ public partial class SettingsWindow : Window
         _engine = engine;
         _focusSafeList = focusSafeList;
         InitializeComponent();
+        DataFolderBox.Text = AppPaths.DataDir;
         Loaded += async (_, _) =>
         {
             await LoadAsync();
@@ -37,6 +38,16 @@ public partial class SettingsWindow : Window
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(AppPaths.DataDir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{AppPaths.DataDir}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex) { Notice.Text = ex.Message; }
+    }
 
     private async Task LoadAsync()
     {

@@ -6,7 +6,7 @@ function Remove-GuardianSafeItem {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Key,
-        [string]$DataPath = (Join-Path $env:LOCALAPPDATA 'PcGuardian')
+        [string]$DataPath = (Get-GuardianDataPath)
     )
     $items = @(Get-GuardianSafeItem -DataPath $DataPath | Where-Object { $_.Key -ne $Key })
     ConvertTo-Json -InputObject @($items) -Depth 3 | Set-Content -Path (Join-Path $DataPath 'safe.json') -Encoding UTF8
