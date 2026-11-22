@@ -35,6 +35,10 @@ jobs:
         shell: pwsh
         run: Invoke-Pester -Path tests -CI
 
+      - name: Build Windows app
+        shell: pwsh
+        run: dotnet build app/PcGuardian.App -c Release
+
       # The app also runs on Windows PowerShell 5.1, which behaves differently (JSON arrays, TLS defaults).
       - name: Test (Windows PowerShell 5.1)
         shell: powershell

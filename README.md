@@ -19,6 +19,18 @@ It **orchestrates** what Windows already provides (Microsoft Defender, winget, W
 
 Early development. v0.1 is a read-only audit with baseline comparison. Releases are unsigned until v1.0.
 
+## Windows app
+
+`app/PcGuardian.App` is a regular Windows program: it shows what changed on your PC, lets you run a full scan
+with one button, and lets you mark items you recognize as safe. Build it with the .NET 8 SDK:
+
+```powershell
+dotnet build app/PcGuardian.App -c Release
+```
+
+Releases are unsigned until the project is approved for free code signing, so Windows SmartScreen may warn
+on first run. Verify a download against the `.sha256` file published with it.
+
 ## Quick start
 
 ```powershell

@@ -6,9 +6,11 @@ function Invoke-GuardianRun {
         First run saves a baseline. Later runs report findings that are new or removed since the baseline.
         Nothing on the system is modified; only files under -DataPath are written.
     .PARAMETER DataPath
-        Where baseline.json and last-report.txt are stored. Default: %LOCALAPPDATA%\PcGuardian
+        Where baseline.json, safe.json and last-report.txt are stored. Default: %LOCALAPPDATA%\PcGuardian
     .PARAMETER ResetBaseline
         Replace the baseline with the current snapshot.
+    .PARAMETER AsObject
+        Return one structured result (used by the app) instead of text lines.
     #>
     [CmdletBinding()]
     param(
@@ -22,16 +24,20 @@ function Invoke-GuardianRun {
         # Also list apps with newer winget versions (needs network). Config exposure checks always run.
         [switch]$CheckUpdates,
         # Hide the one-line support note printed after a run (it is never written to the report file).
-        [switch]$NoDonateNote
+        [switch]$NoDonateNote,
+        [switch]$AsObject
     )
 
-    $donateNote = if ($NoDonateNote) { @() } else {
+    $donateNote = if ($NoDonateNote -or $AsObject) { @() } else {
         @('', 'pc-guardian is free and open source. Support it: see the Sponsor button on the GitHub repo. Hide this line with -NoDonateNote.')
     }
 
     New-Item -ItemType Directory -Force -Path $DataPath | Out-Null
     $baselineFile = Join-Path $DataPath 'baseline.json'
     $reportFile   = Join-Path $DataPath 'last-report.txt'
+    $safeKeys     = @(Get-GuardianSafeItem -DataPath $DataPath | ForEach-Object { $_.Key })
+    # Findings you marked safe are hidden, except malware, which is always reported.
+    $notSafe = { param($f) $f.Category -eq 'Malware' -or $f.Key -notin $safeKeys }
 
     $current = @(
         Get-DefenderAudit
@@ -55,6 +61,17 @@ function Invoke-GuardianRun {
     # Exposures are reported on every run too, for the same reason: a day-one weakness must not become "normal".
     $exposureFindings = @(Get-ExposureAudit)
     if ($CheckUpdates) { $exposureFindings += @(Get-AppUpdateAudit) }
+    $scanFindings     = @($scanFindings     | Where-Object { & $notSafe $_ })
+    $exposureFindings = @($exposureFindings | Where-Object { & $notSafe $_ })
+
+    $items = [System.Collections.Generic.List[object]]::new()
+    function Add-RunItem($kind, $f) {
+        $items.Add([pscustomobject]@{
+            Kind = $kind; Severity = (Get-FindingSeverity -Finding $f)
+            Category = $f.Category; Key = $f.Key; Detail = $f.Detail })
+    }
+    foreach ($f in $scanFindings)     { Add-RunItem 'Scan' $f }
+    foreach ($f in $exposureFindings) { Add-RunItem 'Exposed' $f }
 
     $scanLines = @(
         $scanFindings | ForEach-Object {
@@ -66,9 +83,12 @@ function Invoke-GuardianRun {
     )
 
     if ($ResetBaseline -or -not (Test-Path $baselineFile)) {
-        $current | ConvertTo-Json -Depth 4 | Set-Content -Path $baselineFile -Encoding UTF8
+        ConvertTo-Json -InputObject @($current) -Depth 4 | Set-Content -Path $baselineFile -Encoding UTF8
         $msg = @("Baseline saved with $($current.Count) findings at $baselineFile. Run again later to see changes.") + $scanLines
         $msg | Set-Content -Path $reportFile -Encoding UTF8
+        if ($AsObject) {
+            return [pscustomobject]@{ Generated = (Get-Date -Format 's'); FirstRun = $true; BaselineCount = $current.Count; Items = @($items) }
+        }
         $msg + $donateNote
         return
     }
@@ -77,17 +97,24 @@ function Invoke-GuardianRun {
     # the baseline is a flat list on both 5.1 and 7 (without this every item showed as New).
     $baseline = @(Get-Content -Path $baselineFile -Raw | ConvertFrom-Json | ForEach-Object { $_ })
     $diff = Compare-Baseline -Baseline $baseline -Current $current
+    $newItems     = @($diff.New     | Where-Object { & $notSafe $_ })
+    $removedItems = @($diff.Removed)
 
-    $lines = @("pc-guardian report $(Get-Date -Format 's')", "New: $($diff.New.Count)  Removed: $($diff.Removed.Count)", '')
-    foreach ($f in $diff.New) {
+    $lines = @("pc-guardian report $(Get-Date -Format 's')", "New: $($newItems.Count)  Removed: $($removedItems.Count)", '')
+    foreach ($f in $newItems) {
+        Add-RunItem 'New' $f
         $lines += "[{0}] NEW     {1} - {2}" -f (Get-FindingSeverity -Finding $f), $f.Key, $f.Detail
     }
-    foreach ($f in $diff.Removed) {
+    foreach ($f in $removedItems) {
+        Add-RunItem 'Removed' $f
         $lines += "[Info] REMOVED {0} - {1}" -f $f.Key, $f.Detail
     }
     if ($lines.Count -eq 3) { $lines += 'No changes since baseline.' }
     $lines += $scanLines
 
     $lines | Set-Content -Path $reportFile -Encoding UTF8
+    if ($AsObject) {
+        return [pscustomobject]@{ Generated = (Get-Date -Format 's'); FirstRun = $false; BaselineCount = $baseline.Count; Items = @($items) }
+    }
     $lines + $donateNote
 }

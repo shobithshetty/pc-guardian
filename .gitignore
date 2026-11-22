@@ -5,3 +5,7 @@ snapshot*.json
 report*.txt
 TestResults.xml
 .vscode/
+bin/
+obj/
+publish/
+signed/

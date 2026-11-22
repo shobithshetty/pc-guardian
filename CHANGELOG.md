@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Windows app (`app/PcGuardian.App`, C# / Windows Forms, no NuGet packages): a regular window with status,
+  findings list, Scan now, Mark as safe, and Set up scanners. It runs the PowerShell engine as a child process.
+- Safe list: `Add-/Get-/Remove-GuardianSafeItem` and `Invoke-GuardianRun -AsObject`. Malware cannot be marked safe.
+- Release workflow (tag `v*`): CI-only build, optional SignPath signing, SHA-256 checksum, build provenance.
+  `CODE_SIGNING_POLICY.md` added for the SignPath application.
 - `Install-GuardianScanner` downloads ClamAV definitions, YARA and public rules. YARA and the rule set are pinned
   to an exact version, commit and hash in `data/pins.json`; a mismatch installs nothing. See docs/SUPPLY-CHAIN.md.
 - CI: actions pinned to a commit SHA, tooling pinned to exact versions, read-only token, and a Windows PowerShell 5.1 job.

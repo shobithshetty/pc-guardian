@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- No NuGet packages on purpose: fewer dependencies means a smaller supply-chain attack surface. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>PcGuardian</AssemblyName>
+    <RootNamespace>PcGuardian.App</RootNamespace>
+    <Version>0.1.0</Version>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <!-- Ship the PowerShell engine next to the .exe so the installed app is self-contained. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PcGuardian\**\*" Exclude="..\..\src\PcGuardian\**\*.Tests.ps1">
+      <Link>module\PcGuardian\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
