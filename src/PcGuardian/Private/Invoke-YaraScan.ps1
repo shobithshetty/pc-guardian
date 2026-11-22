@@ -44,6 +44,7 @@ function Invoke-YaraScan {
 
     $found = 0
     foreach ($p in $Path) {
+        Write-GuardianProgress -Type file -Value $p
         # -r recurse, -w no warnings, -f fast mode, -a per-file timeout (s), -z skip files over ~50 MB
         # -m prints rule metadata so the rule author can be kept (required by the Detection Rule License).
         $yargs = @('-C', '-r', '-w', '-f', '-m', '-a', '30', '-z', '52428800', $rules, $p)
@@ -56,8 +57,10 @@ function Invoke-YaraScan {
                 $rule = $Matches.rule; $file = $Matches.file; $meta = $Matches.meta
                 $author = 'unknown'
                 if ($meta -and $meta -match 'author="(?<a>[^"]*)"') { $author = $Matches.a }
-                New-Finding -Category 'Malware' -Key "Malware:YARA:$file" `
+                $f = New-Finding -Category 'Malware' -Key "Malware:YARA:$file" `
                     -Detail "YARA rule $rule (author: $author) matched; public rules can false-positive, review the file"
+                Write-GuardianFound -Finding $f
+                $f
             }
         }
     }

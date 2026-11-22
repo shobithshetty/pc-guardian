@@ -1,0 +1,82 @@
+<Window x:Class="PcGuardian.App.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Settings" Width="620" Height="700" MinWidth="520" MinHeight="420"
+        Icon="Assets/pc-guardian.ico"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBg}"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="14"
+        SourceInitialized="Window_SourceInitialized">
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Padding="24,10,24,16">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Close" Style="{StaticResource SoftButton}" Click="Close_Click"/>
+                <TextBlock x:Name="Notice" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" Foreground="{DynamicResource TextSecondary}"/>
+            </DockPanel>
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24,20,24,0">
+
+                <!-- Daily scan -->
+                <Border Style="{StaticResource Card}" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="Daily scan" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Margin="0,4,0,12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"
+                                   Text="Refreshes the virus database, then scans your Downloads, Temp and startup locations. It only reports; it never deletes."/>
+                        <CheckBox x:Name="DailyCheck" Content="Scan automatically every day"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <TextBlock Text="Time (24-hour, HH:mm)" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBox x:Name="TimeBox" Width="80" Text="02:00"/>
+                            <Button x:Name="SaveDailyButton" Content="Save" Style="{StaticResource PrimaryButton}" Padding="16,6" Margin="12,0,0,0" Click="SaveDaily_Click"/>
+                        </StackPanel>
+                        <TextBlock x:Name="DailyStatus" Margin="0,10,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" FontSize="12"/>
+                        <TextBlock Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" FontSize="12"
+                                   Text="Windows asks for permission to change the schedule."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- VirusTotal -->
+                <Border Style="{StaticResource Card}" Padding="20" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="VirusTotal (optional)" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Margin="0,4,0,12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"
+                                   Text="During full scans, asks VirusTotal about new, unsigned programs. Only a file's fingerprint (SHA-256) is sent, never the file or its path. A free key is for personal, non-commercial use. Off by default."/>
+                        <CheckBox x:Name="VtCheck" Content="Check new unsigned programs with VirusTotal" Checked="VtCheck_Changed" Unchecked="VtCheck_Changed"/>
+                        <TextBlock Text="Your VirusTotal API key" Margin="0,14,0,4"/>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Remove" Style="{StaticResource SoftButton}" Padding="12,6" Margin="8,0,0,0" Click="RemoveKey_Click"/>
+                            <Button DockPanel.Dock="Right" Content="Save key" Style="{StaticResource SoftButton}" Padding="12,6" Margin="8,0,0,0" Click="SaveKey_Click"/>
+                            <PasswordBox x:Name="VtKeyBox"/>
+                        </DockPanel>
+                        <TextBlock x:Name="VtStatus" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" FontSize="12"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Safe list -->
+                <Border x:Name="SafeCard" Style="{StaticResource Card}" Padding="20" Margin="0,12,0,24">
+                    <StackPanel>
+                        <TextBlock Text="Safe list" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Margin="0,4,0,8" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"
+                                   Text="Items you marked as safe are no longer reported as new. Malware detections can never be marked safe."/>
+                        <ItemsControl x:Name="SafeList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,6">
+                                        <Button DockPanel.Dock="Right" Content="Remove" Style="{StaticResource SoftButton}" Padding="12,4"
+                                                Tag="{Binding Key}" Click="RemoveSafe_Click"/>
+                                        <StackPanel Margin="0,0,12,0">
+                                            <TextBlock Text="{Binding Key}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Key}"/>
+                                            <TextBlock Text="{Binding Added}" FontSize="12" Foreground="{DynamicResource TextSecondary}"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock x:Name="SafeEmpty" Text="Nothing on the safe list." Foreground="{DynamicResource TextSecondary}" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

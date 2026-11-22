@@ -4,16 +4,26 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PcGuardian</AssemblyName>
     <RootNamespace>PcGuardian.App</RootNamespace>
     <Version>0.1.0</Version>
-    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>Assets\pc-guardian.ico</ApplicationIcon>
     <Deterministic>true</Deterministic>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+  <!-- The window icon is compiled in; the same file is the .exe icon (ApplicationIcon above). -->
+  <ItemGroup>
+    <Resource Include="Assets\pc-guardian.ico" />
+  </ItemGroup>
+
+  <!-- The old Windows Forms window; superseded by MainWindow.xaml. Safe to delete from the repository. -->
+  <ItemGroup>
+    <Compile Remove="MainForm.cs;Program.cs" />
+  </ItemGroup>
 
   <!-- Ship the PowerShell engine next to the .exe so the installed app is self-contained. -->
   <ItemGroup>

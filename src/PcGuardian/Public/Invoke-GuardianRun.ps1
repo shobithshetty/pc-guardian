@@ -25,8 +25,17 @@ function Invoke-GuardianRun {
         [switch]$CheckUpdates,
         # Hide the one-line support note printed after a run (it is never written to the report file).
         [switch]$NoDonateNote,
-        [switch]$AsObject
+        [switch]$AsObject,
+        # Print PCG| progress lines (phase, current file, counts, findings) for the app to display live.
+        [switch]$Progress
     )
+
+    $script:ProgressEnabled = [bool]$Progress
+    $script:PhaseIndex = 0
+    # Always: audit, settings check, baseline compare. Optional: ClamAV + YARA, VirusTotal, app updates.
+    # VirusTotal runs when asked for, or during a full scan if the person turned it on in Settings.
+    $useVt = [bool]$VirusTotal -or ([bool]$Scan -and [bool](Get-GuardianSetting -DataPath $DataPath).virusTotal)
+    $script:PhaseTotal = 3 + 2 * [int][bool]$Scan + [int]$useVt + [int][bool]$CheckUpdates
 
     $donateNote = if ($NoDonateNote -or $AsObject) { @() } else {
         @('', 'pc-guardian is free and open source. Support it: see the Sponsor button on the GitHub repo. Hide this line with -NoDonateNote.')
@@ -39,28 +48,43 @@ function Invoke-GuardianRun {
     # Findings you marked safe are hidden, except malware, which is always reported.
     $notSafe = { param($f) $f.Category -eq 'Malware' -or $f.Key -notin $safeKeys }
 
+    Start-GuardianPhase -Name 'Checking startup items, tasks, ports and accounts'
     $current = @(
+        Write-GuardianProgress -Type file -Value 'Microsoft Defender status'
         Get-DefenderAudit
+        Write-GuardianProgress -Type file -Value 'Startup items'
         Get-StartupAudit
+        Write-GuardianProgress -Type file -Value 'Scheduled tasks'
         Get-TaskAudit
+        Write-GuardianProgress -Type file -Value 'Listening ports'
         Get-PortAudit
+        Write-GuardianProgress -Type file -Value 'User accounts'
         Get-AccountAudit
     )
 
     # Malware detections are never part of the baseline: a threat present on the first run must not become "normal".
     $scanFindings = @()
-    if ($Scan -or $VirusTotal) {
+    if ($Scan -or $useVt) {
         $scanPaths = @(Get-ClamAvScanPath -Findings $current)
         if ($Scan) {
-            $scanFindings += @(Invoke-ClamAvScan -Path $scanPaths) + @(Invoke-YaraScan -Path $scanPaths)
+            Start-GuardianPhase -Name 'Scanning files with ClamAV'
+            $scanFindings += @(Invoke-ClamAvScan -Path $scanPaths)
+            Start-GuardianPhase -Name 'Scanning files with YARA rules'
+            $scanFindings += @(Invoke-YaraScan -Path $scanPaths)
         }
-        if ($VirusTotal) {
+        if ($useVt) {
+            Start-GuardianPhase -Name 'Looking up file hashes on VirusTotal'
             $scanFindings += @(Invoke-VirusTotalCheck -Path $scanPaths -DataPath $DataPath)
         }
     }
     # Exposures are reported on every run too, for the same reason: a day-one weakness must not become "normal".
+    Start-GuardianPhase -Name 'Checking Windows security settings'
     $exposureFindings = @(Get-ExposureAudit)
-    if ($CheckUpdates) { $exposureFindings += @(Get-AppUpdateAudit) }
+    if ($CheckUpdates) {
+        Start-GuardianPhase -Name 'Checking for app updates'
+        $exposureFindings += @(Get-AppUpdateAudit)
+    }
+    Start-GuardianPhase -Name 'Comparing with your baseline'
     $scanFindings     = @($scanFindings     | Where-Object { & $notSafe $_ })
     $exposureFindings = @($exposureFindings | Where-Object { & $notSafe $_ })
 

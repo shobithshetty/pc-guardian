@@ -47,23 +47,39 @@ function Invoke-ClamAvScan {
         return New-Finding -Category 'Scanner' -Key 'ClamAV:NoDatabase' -Detail 'ClamAV virus database missing; run freshclam first.'
     }
 
-    $scanArgs = @('--database', $db, '--infected', '--recursive', '--no-summary', '--max-filesize=100M') + $Path
-    $output = & $clam.ClamScan @scanArgs 2>&1
-    $code = $LASTEXITCODE
+    # ClamAV loads about 3 million signatures before the first file, which takes ~30 seconds.
+    Write-GuardianProgress -Type file -Value 'Loading virus signatures (about 30 seconds)...'
+    # No --infected: clamscan then prints every file it checks ("path: OK"), which lets the app show live progress.
+    $scanArgs = @('--database', $db, '--recursive', '--no-summary', '--max-filesize=100M') + $Path
 
     $found = 0
-    foreach ($line in $output) {
-        $text = "$line"
+    $done  = 0
+    & $clam.ClamScan @scanArgs 2>&1 | ForEach-Object {
+        $text = "$_"
         if ($text -match '^(?<file>.+): (?<sig>\S+) FOUND$') {
             $found++
-            New-Finding -Category 'Malware' -Key "Malware:$($Matches.file)" -Detail "ClamAV detected $($Matches.sig)"
+            $f = New-Finding -Category 'Malware' -Key "Malware:$($Matches.file)" -Detail "ClamAV detected $($Matches.sig)"
+            Write-GuardianFound -Finding $f
+            $f
         }
         elseif ($text -match "^WARNING: Can't open file (?<file>.+): Invalid argument$") {
             # Windows error 225: another scanner (normally Defender) refused to let ClamAV read the file.
             $found++
-            New-Finding -Category 'Malware' -Key "Malware:$($Matches.file)" -Detail 'File blocked by another scanner (likely Defender flagged it)'
+            $f = New-Finding -Category 'Malware' -Key "Malware:$($Matches.file)" -Detail 'File blocked by another scanner (likely Defender flagged it)'
+            Write-GuardianFound -Finding $f
+            $f
+        }
+        elseif ($text -match '^(?<file>.+): (OK|Empty file)$') {
+            $done++
+            # Report every 10th file so a fast scan does not flood the app with lines.
+            if ($done % 10 -eq 0) {
+                Write-GuardianProgress -Type file -Value $Matches.file
+                Write-GuardianProgress -Type count -Value $done
+            }
         }
     }
+    $code = $LASTEXITCODE
+    Write-GuardianProgress -Type count -Value $done
     if ($code -gt 1 -and $found -eq 0) {
         New-Finding -Category 'Scanner' -Key 'ClamAV:Error' -Detail "clamscan exited with code $code"
     }

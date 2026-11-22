@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Logo and menus: a shield app icon (window, .exe, installer; regenerate with `tools/New-AppIcon.ps1` or replace
+  `Assets/pc-guardian.ico`), and a File / View / Help menu bar.
+- Settings window (File > Settings, Ctrl+,): daily scan on/off and time, optional VirusTotal (off by default) with
+  the key stored encrypted, and the safe list with Remove. About window with credits and licenses.
+- Engine: `Get-/Set-GuardianSetting`, `Get-GuardianDailyScan`, `Set-GuardianVirusTotalKey -Key/-Remove`.
+  VirusTotal runs during full scans only when turned on in Settings.
+- Automatic setup, no "Set up scanners" button: the installer offers (ticked) to install ClamAV and download the
+  protection data; the app checks on launch (`Get-GuardianScannerStatus`) and shows a one-time "Download and scan"
+  card only if something is missing. Downloads show numbered steps and the current item in the progress card.
+- Downloads only when something is new: YARA and the rules record the pinned versions they installed
+  (`installed.json`) and are skipped when current; the ClamAV database updates incrementally. The daily task
+  refreshes the virus database before it scans, and the app refreshes a database older than 3 days before a full scan.
+- Live scan progress: the engine streams phase, current file, file count and findings (`-Progress`, `PCG|` lines);
+  ClamAV now reports every file it checks. The app shows "Step 2 of 5", the current item, elapsed time and a Cancel button.
+- New modern window in WPF (rounded cards, vector shield, per-row Mark as safe, dark mode follows Windows).
+  The old Windows Forms files (`MainForm.cs`, `Program.cs`) are excluded from the build and can be deleted.
+- The scan task `pc-guardian` is no longer reported as a new scheduled task.
+- Docs: `docs/VISION.md` (what the project is and is not, detector sources, roadmap) and `docs/ENGINE-HUB.md`
+  (detector contract, progress protocol, curated update feed).
 - Windows installer (`installer/pc-guardian.iss`, Inno Setup): Start menu entry, optional desktop shortcut,
   optional daily 2:00 AM scan task, clean uninstall, .NET 8 Desktop Runtime check. The release workflow builds it
   in CI with Inno Setup pinned by SHA-256.

@@ -39,7 +39,8 @@ if (-not $ModulePath) {
 if (-not (Test-Path $ModulePath)) { throw "Module not found at $ModulePath" }
 if ($ModulePath -match "'") { throw 'The module path must not contain a single quote.' }
 
-$command  = "Import-Module '$ModulePath' -Force; Invoke-GuardianRun -Scan -NoDonateNote | Out-Null"
+# Refresh the virus database first (incremental, signature-checked by ClamAV's own tool), then scan.
+$command  = "Import-Module '$ModulePath' -Force; try { Install-GuardianScanner -ClamAv | Out-Null } catch { }; Invoke-GuardianRun -Scan -NoDonateNote | Out-Null"
 $action   = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -Command `"$command`""
 $trigger  = New-ScheduledTaskTrigger -Daily -At $At
 # Run a missed scan when the PC is next on, even on battery, and never run longer than two hours.

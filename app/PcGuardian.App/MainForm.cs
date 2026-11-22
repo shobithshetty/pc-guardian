@@ -38,7 +38,7 @@ public sealed class MainForm : Form
         header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         var text = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false };
         text.Controls.AddRange(new Control[] { _headline, _subline });
-        var buttons = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, Anchor = AnchorStyles.Right };
+        var buttons = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Anchor = AnchorStyles.Right };
         buttons.Controls.AddRange(new Control[] { _safeButton, _scanButton });
         header.Controls.Add(text, 0, 0);
         header.Controls.Add(buttons, 1, 0);
@@ -130,7 +130,7 @@ public sealed class MainForm : Form
         }
         else if (items.Count > 0)
         {
-            _headline.Text = $"{items.Count} item{(items.Count > 1 ? "s" : "")} need a look";
+            _headline.Text = items.Count == 1 ? "1 item needs a look" : $"{items.Count} items need a look";
             _headline.ForeColor = Color.DarkOrange;
             _subline.Text = note ?? "No malware found. Mark items you recognize as safe.";
         }
