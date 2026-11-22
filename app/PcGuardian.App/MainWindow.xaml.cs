@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         _engine = engine;
         InitializeComponent();
         ResultsList.ItemsSource = _items;
+        _items.CollectionChanged += (_, _) => UpdateMarkAll();
         _clock.Tick += (_, _) => UpdateStats();
         PreviewKeyDown += (_, e) =>
         {
@@ -358,6 +359,7 @@ public partial class MainWindow : Window
     private void SetWorking(bool working)
     {
         _working = working;
+        UpdateMarkAll();
         ProgressCard.Visibility = working ? Visibility.Visible : Visibility.Collapsed;
         ScanButton.IsEnabled = !working;
         SetupButton.IsEnabled = !working;
@@ -400,6 +402,29 @@ public partial class MainWindow : Window
             SetTone("Good");
         }
         EmptyText.Visibility = !_working && _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>"Mark all as safe" shows only when there is more than one item that can be marked.</summary>
+    private void UpdateMarkAll() =>
+        MarkAllButton.Visibility = !_working && _items.Count(i => i.CanMarkSafe) >= 2 ? Visibility.Visible : Visibility.Collapsed;
+
+    private async void MarkAll_Click(object sender, RoutedEventArgs e)
+    {
+        var markable = _items.Where(i => i.CanMarkSafe).ToList();
+        if (markable.Count == 0) return;
+        var ok = MessageBox.Show(this,
+            $"Mark all {markable.Count} items as safe?\n\nThey will not be reported again unless something new appears. " +
+            "Possible threats are never included, and you can undo this in Settings > Safe list.",
+            "Mark all as safe", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (ok != MessageBoxResult.Yes) return;
+        try
+        {
+            await _engine.MarkSafeAsync(markable.Select(i => i.Key));
+            foreach (var item in markable) _items.Remove(item);
+            UpdateHeadline(null);
+            StatusText.Text = $"Marked {markable.Count} items as safe";
+        }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, "pc-guardian", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
 
     private async void MarkSafe_Click(object sender, RoutedEventArgs e)

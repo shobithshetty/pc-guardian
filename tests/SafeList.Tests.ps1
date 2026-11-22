@@ -27,6 +27,17 @@ Describe 'Safe list' {
         Remove-GuardianSafeItem -Key 'a' -DataPath $d
         @(Get-GuardianSafeItem -DataPath $d).Key | Should -Be @('b')
     }
+    It 'marks several keys safe in one call and skips duplicates' {
+        $d = NewDir
+        Add-GuardianSafeItem -Key 'a' -DataPath $d
+        Add-GuardianSafeItem -Key @('a', 'b', 'c') -DataPath $d
+        (@(Get-GuardianSafeItem -DataPath $d).Key | Sort-Object) | Should -Be @('a', 'b', 'c')
+    }
+    It 'refuses the whole batch if one key is malware' {
+        $d = NewDir
+        { Add-GuardianSafeItem -Key @('ok', 'Malware:YARA:C:\x.exe') -DataPath $d } | Should -Throw '*cannot be marked safe*'
+        @(Get-GuardianSafeItem -DataPath $d).Count | Should -Be 0
+    }
     It 'refuses to mark malware as safe' {
         { Add-GuardianSafeItem -Key 'Malware:YARA:C:\x.exe' -DataPath (NewDir) } | Should -Throw '*cannot be marked safe*'
     }

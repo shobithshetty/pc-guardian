@@ -51,7 +51,10 @@
                     <TextBlock x:Name="Headline" FontSize="22" FontWeight="SemiBold" Text="Starting..."/>
                     <TextBlock x:Name="Subline" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
                 </StackPanel>
-                <Button x:Name="ScanButton" Grid.Column="2" Content="Scan now" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center" Click="Scan_Click"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="MarkAllButton" Content="Mark all as safe" Style="{StaticResource SoftButton}" Margin="0,0,8,0" Visibility="Collapsed" Click="MarkAll_Click"/>
+                    <Button x:Name="ScanButton" Content="Scan now" Style="{StaticResource PrimaryButton}" Click="Scan_Click"/>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -144,7 +147,7 @@
                                             </TextBlock>
                                         </Border>
                                         <StackPanel Grid.Column="1" Margin="4,0,12,0">
-                                            <TextBlock Text="{Binding Key}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Key}"/>
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Key}"/>
                                             <TextBlock Text="{Binding Detail}" Margin="0,2,0,0" TextWrapping="Wrap" MaxHeight="40"
                                                        TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextSecondary}" ToolTip="{Binding Detail}"/>
                                         </StackPanel>

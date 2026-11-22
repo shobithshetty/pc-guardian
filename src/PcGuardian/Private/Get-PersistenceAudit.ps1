@@ -13,7 +13,9 @@ function Get-DefenderExclusionAudit {
     foreach ($kind in 'ExclusionPath', 'ExclusionProcess', 'ExclusionExtension') {
         foreach ($value in @($pref.$kind)) {
             if ($value -and "$value" -notlike 'N/A*') {
-                New-Finding -Category 'Persistence' -Key "Defender:Exclusion:${kind}:$value" -Detail "Defender does not scan this ($kind)"
+                $what = switch ($kind) { 'ExclusionPath' { 'files in this folder or path' } 'ExclusionProcess' { 'files opened by this program' } default { 'files of this type' } }
+                New-Finding -Category 'Persistence' -Key "Defender:Exclusion:${kind}:$value" `
+                    -Detail "Microsoft Defender will not scan $what. Developer tools such as Android Studio add these on purpose; malware also adds them to hide, so keep only the ones you recognize."
             }
         }
     }
@@ -28,8 +30,11 @@ function Get-WmiPersistenceAudit {
     param()
     foreach ($class in 'CommandLineEventConsumer', 'ActiveScriptEventConsumer') {
         Get-CimInstance -Namespace 'root\subscription' -ClassName $class -ErrorAction SilentlyContinue | ForEach-Object {
-            $what = if ($_.PSObject.Properties['CommandLineTemplate'] -and $_.CommandLineTemplate) { $_.CommandLineTemplate }
-                    elseif ($_.PSObject.Properties['ScriptText'] -and $_.ScriptText) { "script: $("$($_.ScriptText)".Substring(0, [Math]::Min(120, "$($_.ScriptText)".Length)))" }
+            $what = if ($_.PSObject.Properties['CommandLineTemplate'] -and $_.CommandLineTemplate) { ("$($_.CommandLineTemplate)" -replace '\s+', ' ') }
+                    elseif ($_.PSObject.Properties['ScriptText'] -and $_.ScriptText) {
+                        $flat = "$($_.ScriptText)" -replace '\s+', ' '
+                        "Runs a script in the background: $($flat.Substring(0, [Math]::Min(110, $flat.Length)))..."
+                    }
                     else { '' }
             New-Finding -Category 'Persistence' -Key "WMI:${class}:$($_.Name)" -Detail $what
         }

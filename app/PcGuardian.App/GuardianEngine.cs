@@ -60,10 +60,14 @@ public sealed class GuardianEngine
 
     public static FindingItem? ParseFound(string json) => JsonSerializer.Deserialize<FindingItem>(json, Json);
 
-    public async Task MarkSafeAsync(string key, CancellationToken ct = default)
+    public Task MarkSafeAsync(string key, CancellationToken ct = default) => MarkSafeAsync(new[] { key }, ct);
+
+    /// <summary>Marks several findings safe in one engine call. The keys travel as JSON in an environment variable.</summary>
+    public async Task MarkSafeAsync(IEnumerable<string> keys, CancellationToken ct = default)
     {
-        var env = new Dictionary<string, string> { ["PCG_KEY"] = key };
-        var (code, _, stderr) = await PowerShellAsync(Prelude + "Add-GuardianSafeItem -Key $env:PCG_KEY", env, null, ct);
+        var env = new Dictionary<string, string> { ["PCG_KEYS"] = JsonSerializer.Serialize(keys.ToArray()) };
+        var (code, _, stderr) = await PowerShellAsync(
+            Prelude + "$k = ConvertFrom-Json $env:PCG_KEYS; Add-GuardianSafeItem -Key @($k)", env, null, ct);
         if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? "Could not save to the safe list.");
     }
 

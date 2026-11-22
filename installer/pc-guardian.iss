@@ -2,9 +2,19 @@
 ; Build:  dotnet publish app/PcGuardian.App -c Release --self-contained false -o publish
 ;         ISCC.exe installer\pc-guardian.iss /DAppVersion=0.1.0
 ; Output: installer\Output\pc-guardian-setup-<version>.exe
+;
+; Personal build for the maintainer's own PC (everything on F:):
+;         ISCC.exe installer\pc-guardian.iss /DAppVersion=0.1.0 /DLocalBuild
+; It defaults the install folder and the data folder to F:. The public release, built by GitHub Actions
+; without /DLocalBuild, keeps the standard Windows defaults (Program Files and %LOCALAPPDATA%).
 
 #ifndef AppVersion
   #define AppVersion "0.1.0"
+#endif
+
+#ifdef LocalBuild
+  #define LocalAppDir  "F:\ALL my softwares\PC Security\pc-guardian"
+  #define LocalDataDir "F:\ALL my softwares\PC Security\pc-guardian\data"
 #endif
 
 [Setup]
@@ -12,12 +22,22 @@ AppId={{8F3B6C1E-5A2D-4E7B-9C41-2D6A0B7E5F13}
 AppName=pc-guardian
 AppVersion={#AppVersion}
 AppPublisher=pc-guardian contributors
+#ifdef LocalBuild
+DefaultDirName={#LocalAppDir}
+; Do not reuse an earlier install's folder (an older copy on C: would otherwise win over the F: default).
+UsePreviousAppDir=no
+#else
 DefaultDirName={autopf}\pc-guardian
+#endif
 DefaultGroupName=pc-guardian
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
 OutputDir=Output
+#ifdef LocalBuild
+OutputBaseFilename=pc-guardian-setup-{#AppVersion}-local
+#else
 OutputBaseFilename=pc-guardian-setup-{#AppVersion}
+#endif
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -85,7 +105,11 @@ begin
     'The default is the standard Windows location. To keep everything on another drive, choose a folder there.',
     False, '');
   DataDirPage.Add('');
+#ifdef LocalBuild
+  DataDirPage.Values[0] := '{#LocalDataDir}';
+#else
   DataDirPage.Values[0] := ExpandConstant('{localappdata}\PcGuardian');
+#endif
 end;
 
 function GetDataDir(Param: String): String;

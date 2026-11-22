@@ -13,6 +13,37 @@ public sealed class FindingItem
     public bool IsAlert => Severity == "Alert";
     public bool CanMarkSafe => !IsMalware;
 
+    /// <summary>A readable title for the row. The raw Key stays as the identity used by the safe list.</summary>
+    public string Title
+    {
+        get
+        {
+            foreach (var (prefix, text) in TitlePrefixes)
+                if (Key.StartsWith(prefix, StringComparison.Ordinal)) return text + Key[prefix.Length..];
+            return Key;
+        }
+    }
+
+    private static readonly (string Prefix, string Text)[] TitlePrefixes =
+    {
+        ("Defender:Exclusion:ExclusionPath:", "Defender skips this folder: "),
+        ("Defender:Exclusion:ExclusionProcess:", "Defender skips this program: "),
+        ("Defender:Exclusion:ExclusionExtension:", "Defender skips this file type: "),
+        ("WMI:ActiveScriptEventConsumer:", "Background script (WMI): "),
+        ("WMI:CommandLineEventConsumer:", "Background command (WMI): "),
+        ("Service:", "Background service: "),
+        ("Hosts:", "Hosts file redirect: "),
+        ("Extension:", "Browser extension: "),
+        ("Cert:Root:", "Trusted root certificate: "),
+        ("Credential:SshKey:", "SSH key without passphrase: "),
+        ("Credential:", "Secret in plain text: "),
+        ("ClickFix:", "Pasted-command trace: "),
+        ("Package:Malicious:", "Known-malicious package: "),
+        ("Package:Vulnerable:", "Packages with known vulnerabilities: "),
+        ("Malware:YARA:", "Rule match: "),
+        ("Malware:", "Possible threat: "),
+    };
+
     /// <summary>The label and colour class of the pill on the row: Threat, Alert or Info.</summary>
     public string Level => IsMalware ? "Threat" : IsAlert ? "Alert" : "Info";
 }

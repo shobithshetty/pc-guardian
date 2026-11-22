@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Installer: `/DLocalBuild` makes a personal build that defaults the install and data folders to F:
+  (`pc-guardian-setup-<version>-local.exe`). The public build keeps the standard Windows defaults.
 - Hiding-place checks in the baseline: background services, trusted root certificates (a user-installed one
   is an alert), hosts-file entries, and browser extensions. Existing baselines absorb these once on upgrade
   (`baseline-checks.json`) instead of reporting everything as new.
