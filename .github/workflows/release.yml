@@ -1,7 +1,7 @@
 name: Release
 
-# Builds the app from the tagged source in CI (never on a developer PC), optionally signs it through
-# SignPath, writes checksums, records build provenance, and publishes a GitHub release.
+# Builds the app and installer from the tagged source in CI (never on a developer PC), optionally signs them
+# through SignPath, writes checksums, records build provenance, and publishes a GitHub release.
 # Signing runs only when the repository variable SIGNPATH_ORGANIZATION_ID is set. Until SignPath approves the
 # project, releases are built unsigned and the README says so.
 
@@ -14,6 +14,11 @@ permissions:
   id-token: write        # build provenance
   attestations: write    # build provenance
   actions: read          # SignPath reads this run
+
+env:
+  # Inno Setup is downloaded from its official release and refused unless the SHA-256 matches.
+  INNO_URL: https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe
+  INNO_SHA256: 8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0
 
 jobs:
   release:
@@ -33,17 +38,18 @@ jobs:
         shell: pwsh
         run: dotnet publish app/PcGuardian.App -c Release --self-contained false -o publish
 
-      - name: Keep the unsigned build
-        id: unsigned
+      # Signing templates. Inputs were checked against the pinned action's action.yml.
+      # Needs: variables SIGNPATH_ORGANIZATION_ID, SIGNPATH_CONNECTOR_URL, SIGNPATH_PROJECT_SLUG,
+      # SIGNPATH_POLICY_SLUG, SIGNPATH_APP_CONFIG_SLUG, SIGNPATH_INSTALLER_CONFIG_SLUG; secret SIGNPATH_API_TOKEN.
+      # Not yet exercised: the project is not approved.
+      - name: Upload unsigned app
+        id: unsigned-app
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: unsigned
+          name: unsigned-app
           path: publish
 
-      # Signing template. Inputs were checked against the pinned action's action.yml.
-      # Needs: variable SIGNPATH_ORGANIZATION_ID, SIGNPATH_CONNECTOR_URL, SIGNPATH_PROJECT_SLUG,
-      # SIGNPATH_POLICY_SLUG; secret SIGNPATH_API_TOKEN. Not yet exercised: the project is not approved.
-      - name: Sign with SignPath
+      - name: Sign app with SignPath
         if: vars.SIGNPATH_ORGANIZATION_ID != ''
         uses: signpath/github-action-submit-signing-request@ced31329c0317e779dad2eec2a7c3bb46ea1343e
         with:
@@ -52,28 +58,77 @@ jobs:
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
-          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_APP_CONFIG_SLUG }}
+          github-artifact-id: ${{ steps.unsigned-app.outputs.artifact-id }}
           wait-for-completion: true
-          output-artifact-directory: signed
+          output-artifact-directory: signed-app
 
-      - name: Package and checksum
-        id: pack
+      - name: Use the signed app files
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        shell: pwsh
+        run: Copy-Item -Path 'signed-app\*' -Destination publish -Recurse -Force
+
+      - name: Install Inno Setup (pinned by hash)
         shell: pwsh
         run: |
-          $src = if (Test-Path signed) { 'signed' } else { 'publish' }
-          $zip = "pc-guardian-${{ github.ref_name }}-win-x64.zip"
-          Compress-Archive -Path "$src\*" -DestinationPath $zip
-          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          "$hash  $zip" | Set-Content "$zip.sha256" -Encoding ASCII
-          "zip=$zip" >> $env:GITHUB_OUTPUT
+          $exe = Join-Path $env:RUNNER_TEMP 'innosetup.exe'
+          Invoke-WebRequest -Uri $env:INNO_URL -OutFile $exe -UseBasicParsing
+          $got = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          if ($got -ne $env:INNO_SHA256) { throw "Inno Setup hash mismatch: $got" }
+          Start-Process -FilePath $exe -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER' -Wait
+          $iscc = Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 7\ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw 'ISCC.exe not found after install.' }
+          "ISCC=$iscc" >> $env:GITHUB_ENV
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = '${{ github.ref_name }}'.TrimStart('v')
+          & $env:ISCC installer\pc-guardian.iss "/DAppVersion=$version"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+      - name: Upload unsigned installer
+        id: unsigned-installer
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: unsigned-installer
+          path: installer/Output
+
+      - name: Sign installer with SignPath
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@ced31329c0317e779dad2eec2a7c3bb46ea1343e
+        with:
+          connector-url: ${{ vars.SIGNPATH_CONNECTOR_URL }}
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_INSTALLER_CONFIG_SLUG }}
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed-installer
+
+      - name: Collect release files and checksums
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $tag = '${{ github.ref_name }}'
+          $installerDir = if (Test-Path signed-installer) { 'signed-installer' } else { 'installer\Output' }
+          Copy-Item "$installerDir\pc-guardian-setup-*.exe" dist
+          Compress-Archive -Path 'publish\*' -DestinationPath "dist\pc-guardian-$tag-win-x64-portable.zip"
+          Get-ChildItem dist -File | ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content dist\SHA256SUMS.txt -Encoding ASCII
 
       - name: Record build provenance
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
         with:
-          subject-path: ${{ steps.pack.outputs.zip }}
+          subject-path: |
+            dist/*.exe
+            dist/*.zip
 
       - name: Publish release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" "${{ steps.pack.outputs.zip }}" "${{ steps.pack.outputs.zip }}.sha256" --title "${{ github.ref_name }}" --generate-notes
+        run: gh release create "${{ github.ref_name }}" (Get-ChildItem dist -File).FullName --title "${{ github.ref_name }}" --generate-notes

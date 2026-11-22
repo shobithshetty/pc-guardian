@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Windows installer (`installer/pc-guardian.iss`, Inno Setup): Start menu entry, optional desktop shortcut,
+  optional daily 2:00 AM scan task, clean uninstall, .NET 8 Desktop Runtime check. The release workflow builds it
+  in CI with Inno Setup pinned by SHA-256.
+- `installer/Install.ps1` registers or removes the daily scan task for the installed layout.
 - Windows app (`app/PcGuardian.App`, C# / Windows Forms, no NuGet packages): a regular window with status,
   findings list, Scan now, Mark as safe, and Set up scanners. It runs the PowerShell engine as a child process.
 - Safe list: `Add-/Get-/Remove-GuardianSafeItem` and `Invoke-GuardianRun -AsObject`. Malware cannot be marked safe.

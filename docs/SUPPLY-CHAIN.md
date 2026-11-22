@@ -12,6 +12,8 @@ project trusts and how that trust is limited.
 | ClamAV program | Installed separately by the user (winget). Not bundled. |
 | ClamAV virus database | Downloaded by `freshclam`, which verifies the signed `.cvd` files itself. |
 | CI actions | Referenced by full commit SHA, not by tag. |
+| Inno Setup (builds the installer in CI) | Exact release URL and SHA-256 in `.github/workflows/release.yml`. A mismatch fails the build. |
+| NuGet packages (Windows app) | None. The app uses only the .NET 8 framework. |
 | CI tooling (Pester, PSScriptAnalyzer) | Exact versions in `.github/workflows/ci.yml`. |
 
 Nothing is fetched from a branch name or "latest".
