@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Staying current: opt-in known-exploited check (installed apps vs the US CISA list; recent additions only, matched
+  by name, public file cached for a day), opt-in update notice (checks GitHub once a day, never installs), and a
+  maintainer-side pin watcher (`tools/Check-Pins.ps1`, daily workflow that opens one issue; Dependabot for Actions).
+  Settings has a "Staying up to date" card. Settings code is centralised in `Save-GuardianSettings`.
 - Installer: `/DLocalBuild` makes a personal build that defaults the install and data folders to F:
   (`pc-guardian-setup-<version>-local.exe`). The public build keeps the standard Windows defaults.
 - Hiding-place checks in the baseline: background services, trusted root certificates (a user-installed one

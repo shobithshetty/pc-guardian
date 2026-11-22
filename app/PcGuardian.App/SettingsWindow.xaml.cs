@@ -59,6 +59,13 @@ public partial class SettingsWindow : Window
             var safe = await _engine.GetSafeItemsAsync();
 
             OsvCheck.IsChecked = settings.Osv;
+            KevCheck.IsChecked = settings.KnownExploited;
+            UpdateCheck.IsChecked = settings.UpdateCheck;
+            if (AppInfo.RepoSlug.Length == 0)
+            {
+                UpdateCheck.IsEnabled = false;
+                UpdateCheckNote.Text = "Available once the project is published on GitHub.";
+            }
             DevFolderList.ItemsSource = settings.DevFolders;
             VtCheck.IsChecked = settings.VirusTotal;
             VtStatus.Text = settings.VirusTotalKeySet ? "A key is saved (encrypted for your Windows account only)."
@@ -86,6 +93,20 @@ public partial class SettingsWindow : Window
             await LoadAsync();
             Notice.Text = "Saved.";
         }
+        catch (Exception ex) { Notice.Text = ex.Message; }
+    }
+
+    private async void KevCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        try { await _engine.SetKnownExploitedEnabledAsync(KevCheck.IsChecked == true); Notice.Text = "Saved."; }
+        catch (Exception ex) { Notice.Text = ex.Message; }
+    }
+
+    private async void UpdateCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        try { await _engine.SetUpdateCheckEnabledAsync(UpdateCheck.IsChecked == true); Notice.Text = "Saved."; }
         catch (Exception ex) { Notice.Text = ex.Message; }
     }
 

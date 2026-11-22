@@ -27,6 +27,24 @@ Pins change only through a reviewed pull request:
 3. Run the tests and `Install-GuardianScanner` against a scratch folder.
 4. Merge only after review.
 
+## Staying current without trusting automation
+
+Threats change daily, so the project watches for new versions, but **automation only finds and proposes; a person
+approves every change to what the tool trusts.**
+
+| What | How it stays current | Who decides |
+|---|---|---|
+| ClamAV virus database | Refreshed by `freshclam` (signature-checked by ClamAV) before the daily scan | Automatic, no code change |
+| YARA, rules, Inno Setup | `tools/Check-Pins.ps1` runs daily in `.github/workflows/pin-watch.yml` and opens or updates one issue with the new versions, the upstream diff link and the hashes to pin | A person reviews the diff, then edits the pins in a pull request |
+| GitHub Actions | Dependabot opens weekly pull requests | A person reviews and merges |
+| Known-exploited list | Public CISA file, cached for a day, used only when the person turns it on | Informational only |
+| Threat news | A daily briefing report for the maintainer (see below) | A person reads it |
+
+**Daily briefing.** A scheduled task on the maintainer's PC searches for the day's breaches, malware campaigns and
+supply-chain attacks and writes a short report saying whether pc-guardian should change. It is report-only. Web
+pages are untrusted text: the task is told to treat them as data, never to run anything it reads, and never to edit
+the project. Any detection idea it proposes goes through the normal review, testing and pinning steps.
+
 ## What this does not protect against
 
 - A rule set or program that was already malicious at the commit that was pinned.

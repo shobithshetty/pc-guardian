@@ -75,6 +75,7 @@
             <Border x:Name="ResultCard" Style="{StaticResource Card}" Padding="20" Margin="0,12,0,0" Visibility="Collapsed" BorderThickness="2">
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="Dismiss" Style="{StaticResource SoftButton}" Padding="14,5" VerticalAlignment="Center" Click="DismissResult_Click"/>
+                    <Button x:Name="ResultAction" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Padding="14,5" Margin="0,0,8,0" VerticalAlignment="Center" Visibility="Collapsed" Click="ResultAction_Click"/>
                     <Viewbox DockPanel.Dock="Left" Width="40" Height="40" Margin="0,0,16,0">
                         <Canvas Width="24" Height="24">
                             <Ellipse x:Name="ResultDot" Width="24" Height="24" Fill="{DynamicResource Good}"/>

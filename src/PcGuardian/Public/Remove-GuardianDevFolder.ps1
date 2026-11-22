@@ -9,7 +9,6 @@ function Remove-GuardianDevFolder {
         [string]$DataPath = (Get-GuardianDataPath)
     )
     $current = Get-GuardianSetting -DataPath $DataPath
-    $folders = @($current.devFolders | Where-Object { $_ -ne $Path.TrimEnd('\') })
-    $out = [ordered]@{ virusTotal = [bool]$current.virusTotal; osv = [bool]$current.osv; devFolders = @($folders) }
-    $out | ConvertTo-Json | Set-Content -Path (Join-Path $DataPath 'settings.json') -Encoding UTF8
+    $current.devFolders = @($current.devFolders | Where-Object { $_ -ne $Path.TrimEnd('\') })
+    Save-GuardianSettings -Settings $current -DataPath $DataPath
 }

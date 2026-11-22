@@ -30,7 +30,10 @@ function Invoke-GuardianRun {
         [switch]$Progress,
         # Opt-in: check package-lock.json / requirements.txt in code folders against osv.dev (sends package names
         # and versions only). Also runs during full scans when turned on in Settings.
-        [switch]$CheckPackages
+        [switch]$CheckPackages,
+        # Opt-in: compare installed programs with the US known-exploited-vulnerabilities list (downloads a public file).
+        # Also runs during full scans when turned on in Settings.
+        [switch]$CheckKnownExploited
     )
 
     $script:ProgressEnabled = [bool]$Progress
@@ -40,7 +43,8 @@ function Invoke-GuardianRun {
     $useVt = [bool]$VirusTotal -or ([bool]$Scan -and [bool](Get-GuardianSetting -DataPath $DataPath).virusTotal)
     $usePkg = [bool]$CheckPackages -or ([bool]$Scan -and [bool](Get-GuardianSetting -DataPath $DataPath).osv)
     # A full scan also looks for stolen-credential and ClickFix traces (one more step).
-    $script:PhaseTotal = 3 + 2 * [int][bool]$Scan + [int][bool]$Scan + [int]$useVt + [int]$usePkg + [int][bool]$CheckUpdates
+    $useKev = [bool]$CheckKnownExploited -or ([bool]$Scan -and [bool](Get-GuardianSetting -DataPath $DataPath).knownExploited)
+    $script:PhaseTotal = 3 + 2 * [int][bool]$Scan + [int][bool]$Scan + [int]$useVt + [int]$usePkg + [int]$useKev + [int][bool]$CheckUpdates
 
     $donateNote = if ($NoDonateNote -or $AsObject) { @() } else {
         @('', 'pc-guardian is free and open source. Support it: see the Sponsor button on the GitHub repo. Hide this line with -NoDonateNote.')
@@ -97,6 +101,11 @@ function Invoke-GuardianRun {
         $exposureFindings += @(Get-CredentialExposureAudit)
         Write-GuardianProgress -Type file -Value 'Run box and PowerShell history'
         $exposureFindings += @(Get-ClickFixTraceAudit)
+    }
+    if ($useKev) {
+        Start-GuardianPhase -Name 'Checking installed apps against the known-exploited list'
+        Write-GuardianProgress -Type file -Value 'Downloading the public known-exploited list (cached for a day)'
+        $exposureFindings += @(Get-KnownExploitedAudit -DataPath $DataPath)
     }
     if ($usePkg) {
         Start-GuardianPhase -Name 'Checking code packages against osv.dev'

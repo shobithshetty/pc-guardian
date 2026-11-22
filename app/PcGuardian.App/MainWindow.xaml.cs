@@ -47,6 +47,7 @@ public partial class MainWindow : Window
             if (_scanner is { Ready: false } && ConsumeAutoSetupFlag())
                 await RunSetupAsync(installClamAv: !_scanner.ClamAvInstalled, clamAvOnly: false);
             await RunScanAsync(deep: false);
+            await CheckForUpdateAsync();
         };
     }
 
@@ -83,8 +84,13 @@ public partial class MainWindow : Window
     // ---- Finished-work signals --------------------------------------------------------------------------------
 
     /// <summary>A card that says what just finished and stays until dismissed. Tone is Good, Warn or Bad.</summary>
-    private void ShowResultCard(string title, string detail, string tone)
+    private string? _resultActionUrl;
+
+    private void ShowResultCard(string title, string detail, string tone, string? actionText = null, string? actionUrl = null)
     {
+        _resultActionUrl = actionUrl;
+        ResultAction.Content = actionText;
+        ResultAction.Visibility = actionText != null && actionUrl != null ? Visibility.Visible : Visibility.Collapsed;
         ResultTitle.Text = title;
         ResultDetail.Text = detail;
         ResultDot.SetResourceReference(Shape.FillProperty, tone);
@@ -94,6 +100,28 @@ public partial class MainWindow : Window
     }
 
     private void DismissResult_Click(object sender, RoutedEventArgs e) => ResultCard.Visibility = Visibility.Collapsed;
+
+    private void ResultAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (_resultActionUrl != null) AppInfo.OpenLink(_resultActionUrl);   // https only; anything else is refused
+    }
+
+    /// <summary>Only when the person turned it on in Settings and the project has a GitHub address. Never installs anything.</summary>
+    private async Task CheckForUpdateAsync()
+    {
+        if (AppInfo.RepoSlug.Length == 0) return;
+        try
+        {
+            var settings = await _engine.GetSettingsAsync();
+            if (!settings.UpdateCheck) return;
+            var info = await _engine.GetUpdateInfoAsync(AppInfo.RepoSlug, AppInfo.Version);
+            if (info is { Available: true, Url: not null })
+                ShowResultCard($"pc-guardian {info.Latest} is available",
+                    $"You have {AppInfo.Version}. Nothing is installed automatically: open the download page, check the checksum, then run the new installer.",
+                    "Accent", "Open download page", info.Url);
+        }
+        catch { /* an update notice is a convenience; never bother the person with its errors */ }
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct FlashInfo

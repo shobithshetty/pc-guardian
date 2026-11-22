@@ -86,6 +86,24 @@ public sealed class GuardianEngine
         RunVoidAsync("Set-GuardianSetting -Name virusTotal -Value ([bool]::Parse($env:PCG_VALUE))",
             new() { ["PCG_VALUE"] = enabled ? "true" : "false" }, ct);
 
+    public Task SetKnownExploitedEnabledAsync(bool enabled, CancellationToken ct = default) =>
+        RunVoidAsync("Set-GuardianSetting -Name knownExploited -Value ([bool]::Parse($env:PCG_VALUE))",
+            new() { ["PCG_VALUE"] = enabled ? "true" : "false" }, ct);
+
+    public Task SetUpdateCheckEnabledAsync(bool enabled, CancellationToken ct = default) =>
+        RunVoidAsync("Set-GuardianSetting -Name updateCheck -Value ([bool]::Parse($env:PCG_VALUE))",
+            new() { ["PCG_VALUE"] = enabled ? "true" : "false" }, ct);
+
+    /// <summary>Asks the engine whether a newer release exists. The engine caches the answer for about a day.</summary>
+    public async Task<UpdateInfo> GetUpdateInfoAsync(string repository, string currentVersion, CancellationToken ct = default)
+    {
+        var env = new Dictionary<string, string> { ["PCG_REPO"] = repository, ["PCG_VERSION"] = currentVersion };
+        var (code, stdout, stderr) = await PowerShellAsync(
+            Prelude + "Get-GuardianUpdateInfo -Repository $env:PCG_REPO -CurrentVersion $env:PCG_VERSION | ConvertTo-Json -Compress", env, null, ct);
+        if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? "Could not check for updates.");
+        return JsonSerializer.Deserialize<UpdateInfo>(stdout.Trim(), Json) ?? new UpdateInfo();
+    }
+
     public Task SetOsvEnabledAsync(bool enabled, CancellationToken ct = default) =>
         RunVoidAsync("Set-GuardianSetting -Name osv -Value ([bool]::Parse($env:PCG_VALUE))",
             new() { ["PCG_VALUE"] = enabled ? "true" : "false" }, ct);

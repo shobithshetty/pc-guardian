@@ -12,6 +12,9 @@ public static class AppInfo
 
     // Filled in when the project is published. Empty means "not published yet" and the links stay hidden.
     public const string ProjectUrl = "";
+
+    /// <summary>GitHub "owner/name" used by the optional update notice. Empty until the project is published.</summary>
+    public const string RepoSlug = "";
     public const string SponsorUrl = "";
 
     public const string Credits =

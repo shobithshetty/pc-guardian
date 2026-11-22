@@ -81,7 +81,18 @@ public sealed class AppSettings
     public bool VirusTotal { get; set; }
     public bool VirusTotalKeySet { get; set; }
     public bool Osv { get; set; }
+    public bool KnownExploited { get; set; }
+    public bool UpdateCheck { get; set; }
     public List<string> DevFolders { get; set; } = new();
+}
+
+/// <summary>Get-GuardianUpdateInfo: is a newer pc-guardian release on GitHub?</summary>
+public sealed class UpdateInfo
+{
+    public bool Available { get; set; }
+    public string? Current { get; set; }
+    public string? Latest { get; set; }
+    public string? Url { get; set; }
 }
 
 /// <summary>Get-GuardianDailyScan: the scheduled daily scan task.</summary>

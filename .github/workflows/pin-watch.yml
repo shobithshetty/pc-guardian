@@ -1,0 +1,43 @@
+name: Pin watch
+
+# Once a day, report whether the pinned downloads (YARA, the rules, Inno Setup) have newer versions.
+# It only OPENS OR UPDATES AN ISSUE with values to review. It never edits a pin or opens a pull request by itself:
+# a person reads the upstream diff first (see docs/SUPPLY-CHAIN.md).
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: windows-latest
+    steps:
+      # Pinned to a full commit SHA (v4)
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Check pins
+        id: check
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $r = ./tools/Check-Pins.ps1 -ComputeHashes -OutFile report.md -AsObject
+          "has_updates=$($r.HasUpdates.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          Get-Content report.md
+
+      - name: Open or update the issue
+        if: steps.check.outputs.has_updates == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $title = 'Pin updates available'
+          $n = gh issue list --state open --search "$title in:title" --json number --jq '.[0].number'
+          if ($n) { gh issue edit $n --body-file report.md } else { gh issue create --title $title --body-file report.md }

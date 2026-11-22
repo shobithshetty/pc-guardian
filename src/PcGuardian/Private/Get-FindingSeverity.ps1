@@ -51,6 +51,11 @@ function Get-FindingSeverity {
         if ($Finding.Key -like 'Credential:SshKey:*') { return 'Info' }
         return 'Alert'
     }
+    # Recently exploited vulnerabilities in something you have installed: an alert when the newest is under two weeks old.
+    if ($Finding.Category -eq 'KnownExploited') {
+        if ($detail -match 'newest (0|1[0-4]|[1-9]) days? ago') { return 'Alert' }
+        return 'Info'
+    }
     # A known-malicious package is an alert; ordinary advisories are informational.
     if ($Finding.Category -eq 'Package') {
         if ($Finding.Key -like 'Package:Malicious:*') { return 'Alert' }
