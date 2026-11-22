@@ -20,8 +20,14 @@ function Invoke-GuardianRun {
         # Needs a key from Set-GuardianVirusTotalKey. Sends data to virustotal.com.
         [switch]$VirusTotal,
         # Also list apps with newer winget versions (needs network). Config exposure checks always run.
-        [switch]$CheckUpdates
+        [switch]$CheckUpdates,
+        # Hide the one-line support note printed after a run (it is never written to the report file).
+        [switch]$NoDonateNote
     )
+
+    $donateNote = if ($NoDonateNote) { @() } else {
+        @('', 'pc-guardian is free and open source. Support it: see the Sponsor button on the GitHub repo. Hide this line with -NoDonateNote.')
+    }
 
     New-Item -ItemType Directory -Force -Path $DataPath | Out-Null
     $baselineFile = Join-Path $DataPath 'baseline.json'
@@ -63,11 +69,13 @@ function Invoke-GuardianRun {
         $current | ConvertTo-Json -Depth 4 | Set-Content -Path $baselineFile -Encoding UTF8
         $msg = @("Baseline saved with $($current.Count) findings at $baselineFile. Run again later to see changes.") + $scanLines
         $msg | Set-Content -Path $reportFile -Encoding UTF8
-        $msg
+        $msg + $donateNote
         return
     }
 
-    $baseline = @(Get-Content -Path $baselineFile -Raw | ConvertFrom-Json)
+    # Windows PowerShell 5.1 returns a JSON array as ONE object; the ForEach-Object unrolls it so
+    # the baseline is a flat list on both 5.1 and 7 (without this every item showed as New).
+    $baseline = @(Get-Content -Path $baselineFile -Raw | ConvertFrom-Json | ForEach-Object { $_ })
     $diff = Compare-Baseline -Baseline $baseline -Current $current
 
     $lines = @("pc-guardian report $(Get-Date -Format 's')", "New: $($diff.New.Count)  Removed: $($diff.Removed.Count)", '')
@@ -81,5 +89,5 @@ function Invoke-GuardianRun {
     $lines += $scanLines
 
     $lines | Set-Content -Path $reportFile -Encoding UTF8
-    $lines
+    $lines + $donateNote
 }

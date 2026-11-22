@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `Install-GuardianScanner` downloads ClamAV definitions, YARA and public rules. YARA and the rule set are pinned
+  to an exact version, commit and hash in `data/pins.json`; a mismatch installs nothing. See docs/SUPPLY-CHAIN.md.
+- CI: actions pinned to a commit SHA, tooling pinned to exact versions, read-only token, and a Windows PowerShell 5.1 job.
+- Fix: the saved baseline was read as a single item on Windows PowerShell 5.1, so every run reported everything as new.
+
+- Optional support note after each run (`-NoDonateNote` hides it) and a `.github/FUNDING.yml` template.
 - Opt-in VirusTotal reputation lookup (`Invoke-GuardianRun -VirusTotal`): sends only the SHA-256 of recent,
   unsigned executables, caches results by hash, and needs a key stored encrypted by `Set-GuardianVirusTotalKey`.
   Three or more engines must flag a file before it becomes a finding.

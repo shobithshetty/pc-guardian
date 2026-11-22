@@ -1,0 +1,5 @@
+# Shows the "Sponsor" button on the repo. Fill in your usernames, then remove the leading '#'.
+# An unknown username makes GitHub reject the file, so leave a line commented until it is real.
+# github: [YOUR_GITHUB_USERNAME]
+# ko_fi: YOUR_KOFI_USERNAME
+# buy_me_a_coffee: YOUR_BMC_USERNAME

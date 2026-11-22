@@ -1,5 +1,7 @@
 Set-StrictMode -Version Latest
 
+$script:ModuleRoot = $PSScriptRoot
+
 $publicFiles  = @(Get-ChildItem -Path (Join-Path $PSScriptRoot 'Public')  -Filter '*.ps1' -ErrorAction SilentlyContinue)
 $privateFiles = @(Get-ChildItem -Path (Join-Path $PSScriptRoot 'Private') -Filter '*.ps1' -ErrorAction SilentlyContinue)
 

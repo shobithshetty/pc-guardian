@@ -38,6 +38,14 @@ The first run creates a baseline. Run it again later to see what changed.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [SECURITY.md](SECURITY.md).
 
+## Support the project
+
+pc-guardian is free and always will be. If it saved you time or worried you less, you can chip in via
+the Sponsor button on this repository (GitHub Sponsors, Ko-fi or Buy Me a Coffee). Donations are optional
+and unlock nothing. Bug reports, rule feedback and false-positive reports help just as much.
+
+The tool prints one short support line after a run. Silence it with `Invoke-GuardianRun -NoDonateNote`.
+
 ## License
 
 MIT

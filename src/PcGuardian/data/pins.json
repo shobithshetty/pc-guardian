@@ -1,0 +1,13 @@
+{
+  "_note": "Update these only through a reviewed change. See docs/SUPPLY-CHAIN.md.",
+  "yara": {
+    "version": "v4.6.0",
+    "asset": "yara-4.6.0-2443-win64.zip",
+    "sha256": "5e7124f173ed442458429ac0f79a4db2c024cc183c595737d477a7575d81e6dc"
+  },
+  "rules": {
+    "repo": "Neo23x0/signature-base",
+    "commit": "78d979eef87786a613659ee82e55abdd45572a78",
+    "contentSha256": "1a27e13fa4dc31fad94f5514f970f3e89a1b9c5e2a876c4d77abc2a926eb2eed"
+  }
+}

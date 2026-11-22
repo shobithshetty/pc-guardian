@@ -5,17 +5,24 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege: CI only reads the repo.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to a full commit SHA (v4). A tag can be moved to point at different code; a SHA cannot.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
 
-      - name: Install tooling
+      - name: Install tooling (exact versions)
         shell: pwsh
         run: |
-          Install-Module Pester -MinimumVersion 5.5.0 -Force -SkipPublisherCheck -Scope CurrentUser
-          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+          Install-Module Pester -RequiredVersion 6.2.0 -Force -SkipPublisherCheck -Scope CurrentUser
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Force -Scope CurrentUser
 
       - name: Lint
         shell: pwsh
@@ -24,6 +31,14 @@ jobs:
           $r | Format-Table -AutoSize
           if ($r | Where-Object Severity -eq 'Error') { exit 1 }
 
-      - name: Test
+      - name: Test (PowerShell 7)
         shell: pwsh
         run: Invoke-Pester -Path tests -CI
+
+      # The app also runs on Windows PowerShell 5.1, which behaves differently (JSON arrays, TLS defaults).
+      - name: Test (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          Install-Module Pester -RequiredVersion 5.9.1 -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module Pester -RequiredVersion 5.9.1
+          Invoke-Pester -Path tests -CI
