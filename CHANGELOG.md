@@ -5,8 +5,11 @@
 - Three more detectors in the full scan, downloaded once (pinned and hash-checked): **HollowsHunter** finds
   injected or hollowed code inside running programs; **Hayabusa** hunts the last 30 days of Windows event logs
   with Sigma-based rules (high and critical only); the **LOLDrivers** list flags vulnerable or malicious driver
-  files. All read-only. Not yet tested: the real HollowsHunter report for a detection (format inferred, handled
-  defensively) and a full download through `Install-DetectorFiles`.
+  files. All read-only. The download through `Install-DetectorFiles` was exercised by the app and every file matched
+  its pinned hash. Not yet tested: the real HollowsHunter report for a detection (format inferred, handled
+  defensively).
+- Result rows use short titles ("Open port 3000 (node)", "Scheduled task: ActionCenterDeferralTask"); the full
+  technical name is still shown on hover.
 - File > "Scan before Windows starts (Defender Offline)": explains it, then opens Windows Security. pc-guardian never
   restarts the PC itself.
 - Every result row now has a plain-English explanation and a "What is this?" button that opens a Google search. The

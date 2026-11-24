@@ -18,6 +18,27 @@ public sealed class FindingItem
     {
         get
         {
+            // Ports: "Port:3000:node" -> "Open port 3000 (node)".
+            if (Key.StartsWith("Port:", StringComparison.Ordinal))
+            {
+                var p = Key.Split(':');
+                if (p.Length > 2) return $"Open port {p[1]} ({p[2]})";
+            }
+            // Scheduled tasks: drop the folder, the account ID (S-1-5-21-...) and the trailing {guid}.
+            if (Key.StartsWith("Task:", StringComparison.Ordinal))
+            {
+                var leaf = Key[(Key.LastIndexOf('\\') + 1)..];
+                leaf = System.Text.RegularExpressions.Regex.Replace(leaf, @"[-_ ]?\{[0-9a-fA-F-]{36}\}$", "");
+                if (leaf.Length > 0) return "Scheduled task: " + leaf;
+            }
+            if (Key.StartsWith("StartupFolder:", StringComparison.Ordinal)) return "Startup folder item: " + Key["StartupFolder:".Length..];
+            if (Key.StartsWith("Startup:", StringComparison.Ordinal))
+            {
+                var p = Key.Split(':', 3);
+                if (p.Length == 3) return "Starts with Windows: " + p[2];
+            }
+            if (Key.StartsWith("Admin:", StringComparison.Ordinal)) return "Administrator account: " + Key["Admin:".Length..];
+            if (Key.StartsWith("User:", StringComparison.Ordinal)) return "User account: " + Key["User:".Length..];
             foreach (var (prefix, text) in TitlePrefixes)
                 if (Key.StartsWith(prefix, StringComparison.Ordinal)) return text + Key[prefix.Length..];
             return Key;
