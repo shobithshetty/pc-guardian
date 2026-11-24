@@ -3,8 +3,8 @@ BeforeAll {
     $script:data = Join-Path ([IO.Path]::GetTempPath()) ('pcg-ign-' + [guid]::NewGuid())
     $script:work = Join-Path ([IO.Path]::GetTempPath()) ('pcg-files-' + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $script:data, $script:work | Out-Null
-    $script:file = Join-Path $script:work 'rules.yar'
-    Set-Content -Path $script:file -Value 'rule x { condition: false }'
+    $script:file = Join-Path $script:work 'sample.bin'
+    Set-Content -Path $script:file -Value 'some harmless sample bytes'
 }
 
 Describe 'ignoring a flagged file' {
