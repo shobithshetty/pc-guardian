@@ -71,6 +71,14 @@ public sealed class GuardianEngine
         if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? "Could not save to the safe list.");
     }
 
+    /// <summary>Ignores one flagged file while its contents stay the same. The path travels in an environment variable.</summary>
+    public async Task IgnoreFileAsync(string path, CancellationToken ct = default)
+    {
+        var (code, _, stderr) = await PowerShellAsync(
+            Prelude + "Add-GuardianIgnoredFile -Path $env:PCG_PATH", new Dictionary<string, string> { ["PCG_PATH"] = path }, null, ct);
+        if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? "Could not ignore that file.");
+    }
+
     // ---- Settings -----------------------------------------------------------------------------------------
 
     public async Task<AppSettings> GetSettingsAsync(CancellationToken ct = default) =>

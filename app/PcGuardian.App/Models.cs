@@ -13,6 +13,19 @@ public sealed class FindingItem
     public bool IsAlert => Severity == "Alert";
     public bool CanMarkSafe => !IsMalware;
 
+    /// <summary>The flagged file's path for scanner findings ("Malware:C:\x" or "Malware:YARA:C:\x"), else empty.</summary>
+    public string FilePath
+    {
+        get
+        {
+            if (!IsMalware) return "";
+            var m = System.Text.RegularExpressions.Regex.Match(Key, @"^Malware:(?:YARA:)?(?<p>[A-Za-z]:\\.+|\\\\.+)$");
+            return m.Success ? m.Groups["p"].Value : "";
+        }
+    }
+
+    public bool CanIgnoreFile => FilePath.Length > 0;
+
     /// <summary>A readable title for the row. The raw Key stays as the identity used by the safe list.</summary>
     public string Title
     {

@@ -131,6 +131,8 @@ function Invoke-GuardianRun {
         $exposureFindings += @(Get-AppUpdateAudit)
     }
     Start-GuardianPhase -Name 'Comparing with your baseline'
+    # pc-guardian's own rule files are not findings, and a file you chose to ignore stays quiet while unchanged.
+    $scanFindings     = @(Remove-SuppressedMalware -Finding $scanFindings -DataPath $DataPath)
     $scanFindings     = @($scanFindings     | Where-Object { & $notSafe $_ })
     $exposureFindings = @($exposureFindings | Where-Object { & $notSafe $_ })
 

@@ -475,6 +475,25 @@ public partial class MainWindow : Window
         AppInfo.OpenLink("https://www.google.com/search?q=" + Uri.EscapeDataString(item.SearchQuery));
     }
 
+    /// <summary>Ignores one flagged file while its contents are unchanged. Asks first, because it hides a scanner result.</summary>
+    private async void IgnoreFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: FindingItem item } || item.FilePath.Length == 0) return;
+        var ok = MessageBox.Show(this,
+            "Ignore this file?\n\n" + item.FilePath + "\n\nOnly do this if you are sure it is a false alarm (for example a detection-rule or test file). " +
+            "pc-guardian remembers the file's exact fingerprint, so it is reported again if the file ever changes.",
+            "Ignore this file", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+        if (ok != MessageBoxResult.Yes) return;
+        try
+        {
+            await _engine.IgnoreFileAsync(item.FilePath);
+            _items.Remove(item);
+            UpdateHeadline(null);
+            StatusText.Text = "Ignoring: " + item.FilePath;
+        }
+        catch (Exception ex) { MessageBox.Show(this, ex.Message, "pc-guardian", MessageBoxButton.OK, MessageBoxImage.Warning); }
+    }
+
     private async void MarkSafe_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: FindingItem item } || item.IsMalware) return;
