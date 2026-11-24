@@ -12,6 +12,10 @@
         <MenuItem Header="_File">
             <MenuItem Header="_Quick check" Click="QuickCheck_Click"/>
             <MenuItem Header="_Full scan" Click="Scan_Click"/>
+            <MenuItem Header="Scan a f_older or drive..." Click="ScanFolder_Click"
+                      ToolTip="Checks every file in the folder or drive you choose. Slower than a full scan."/>
+            <MenuItem Header="Scan _all drives (slow)..." Click="ScanAllDrives_Click"
+                      ToolTip="Checks every file on every fixed drive. It can take hours."/>
             <MenuItem Header="Scan before Windows _starts (Defender Offline)..." Click="OfflineScan_Click"
                       ToolTip="Finds rootkits that hide while Windows is running. Opens Windows Security; your PC restarts."/>
             <Separator/>

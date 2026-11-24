@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Faster full scan. Files that were found clean and have not changed (same size and modified time) are skipped
+  for up to 7 days, then checked again, so repeat scans only look at new or changed files. Per-file limits (time,
+  size, archive depth) stop one huge file from stalling a scan. The clean-file list is `scan-cache.json` in the data
+  folder; infected files and files that could not be read are never remembered.
+- Scan a folder or drive: File > "Scan a folder or drive..." and "Scan all drives (slow)...". Every file is checked
+  (no clean-file memory), with a warning that a whole drive can take hours. Engine: `Invoke-GuardianRun -ScanPath`.
+- The trusted-certificate check reads the stores through the .NET API. In a hidden background process the old
+  `Cert:` drive returned nothing, so saved certificates looked removed; it also no longer fails silently.
+- Scanner results on YARA rule files (`.yar`, `.yara`, `.yarc`) and on pc-guardian's own folders are not reported, and a
+  flagged file can be ignored by fingerprint ("Ignore this file"); it is reported again if the file changes.
+
 - Three more detectors in the full scan, downloaded once (pinned and hash-checked): **HollowsHunter** finds
   injected or hollowed code inside running programs; **Hayabusa** hunts the last 30 days of Windows event logs
   with Sigma-based rules (high and critical only); the **LOLDrivers** list flags vulnerable or malicious driver

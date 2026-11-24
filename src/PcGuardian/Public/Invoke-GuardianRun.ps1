@@ -33,8 +33,12 @@ function Invoke-GuardianRun {
         [switch]$CheckPackages,
         # Opt-in: compare installed programs with the US known-exploited-vulnerabilities list (downloads a public file).
         # Also runs during full scans when turned on in Settings.
-        [switch]$CheckKnownExploited
+        [switch]$CheckKnownExploited,
+        # Scan these folders or drives (all of their files) with ClamAV and YARA instead of the usual high-risk
+        # locations. Implies a full scan, ignores the memory of clean files, and skips the system-wide detectors.
+        [string[]]$ScanPath
     )
+    if ($ScanPath) { $Scan = [switch]$true }
 
     $script:ProgressEnabled = [bool]$Progress
     $script:PhaseIndex = 0
@@ -46,7 +50,7 @@ function Invoke-GuardianRun {
     $useKev = [bool]$CheckKnownExploited -or ([bool]$Scan -and [bool](Get-GuardianSetting -DataPath $DataPath).knownExploited)
     # A full scan also runs whichever extra detectors were downloaded (drivers, memory, event logs), one step each.
     $det = Find-GuardianDetector -DataPath $DataPath
-    $detSteps = if ($Scan) { [int][bool]$det.LolDrivers + [int][bool]$det.HollowsHunter + [int][bool]$det.Hayabusa } else { 0 }
+    $detSteps = if ($Scan -and -not $ScanPath) { [int][bool]$det.LolDrivers + [int][bool]$det.HollowsHunter + [int][bool]$det.Hayabusa } else { 0 }
     $script:PhaseTotal = 3 + 2 * [int][bool]$Scan + [int][bool]$Scan + $detSteps + [int]$useVt + [int]$usePkg + [int]$useKev + [int][bool]$CheckUpdates
 
     $donateNote = if ($NoDonateNote -or $AsObject) { @() } else {
@@ -83,21 +87,21 @@ function Invoke-GuardianRun {
     # Malware detections are never part of the baseline: a threat present on the first run must not become "normal".
     $scanFindings = @()
     if ($Scan -or $useVt) {
-        $scanPaths = @(Get-ClamAvScanPath -Findings $current)
+        $scanPaths = if ($ScanPath) { @($ScanPath | Where-Object { $_ -and (Test-Path -LiteralPath $_) }) } else { @(Get-ClamAvScanPath -Findings $current) }
         if ($Scan) {
             Start-GuardianPhase -Name 'Scanning files with ClamAV'
-            $scanFindings += @(Invoke-ClamAvScan -Path $scanPaths)
+            $scanFindings += @(Invoke-ClamAvScan -Path $scanPaths -Deep:([bool]$ScanPath) -CachePath (Join-Path $DataPath 'scan-cache.json'))
             Start-GuardianPhase -Name 'Scanning files with YARA rules'
             $scanFindings += @(Invoke-YaraScan -Path $scanPaths)
-            if ($det.LolDrivers) {
+            if ($det.LolDrivers -and -not $ScanPath) {
                 Start-GuardianPhase -Name 'Checking drivers against the vulnerable-driver list'
                 $scanFindings += @(Invoke-DriverCheck -ListPath $det.LolDrivers)
             }
-            if ($det.HollowsHunter) {
+            if ($det.HollowsHunter -and -not $ScanPath) {
                 Start-GuardianPhase -Name 'Looking for injected code inside running programs'
                 $scanFindings += @(Invoke-MemoryScan)
             }
-            if ($det.Hayabusa) {
+            if ($det.Hayabusa -and -not $ScanPath) {
                 Start-GuardianPhase -Name 'Hunting suspicious activity in Windows event logs'
                 $scanFindings += @(Invoke-EventLogScan)
             }

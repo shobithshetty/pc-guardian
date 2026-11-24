@@ -255,9 +255,10 @@ public partial class MainWindow : Window
         _cts?.Cancel();
     }
 
-    private async Task RunScanAsync(bool deep)
+    private async Task RunScanAsync(bool deep, IReadOnlyList<string>? paths = null)
     {
         if (_working) return;
+        var custom = paths is { Count: > 0 };
         _cts = new CancellationTokenSource();
         _fileCount = 0;
         SetWorking(true);
@@ -266,13 +267,15 @@ public partial class MainWindow : Window
         CurrentText.Text = "";
         Bar.Value = 0;
         _items.Clear();
-        Headline.Text = deep ? "Scanning your PC" : "Checking your PC";
-        Subline.Text = deep ? "This can take several minutes. You can keep using your PC." : "This takes a few seconds.";
+        Headline.Text = custom ? "Scanning " + string.Join(", ", paths!) : deep ? "Scanning your PC" : "Checking your PC";
+        Subline.Text = custom ? "Every file is checked, so this can take a long time (a whole drive can take hours). You can keep using your PC, and Cancel stops it."
+            : deep ? "The first scan can take several minutes; later ones only check new or changed files. You can keep using your PC."
+            : "This takes a few seconds.";
         SetTone("Accent");
 
         try
         {
-            var result = await _engine.RunAsync(deep, new Progress<ProgressEvent>(OnProgress), _cts.Token);
+            var result = await _engine.RunAsync(deep, new Progress<ProgressEvent>(OnProgress), _cts.Token, paths);
             _items.Clear();
             foreach (var f in result.Items.OrderByDescending(i => i.IsMalware).ThenByDescending(i => i.IsAlert))
                 _items.Add(f);
@@ -283,8 +286,9 @@ public partial class MainWindow : Window
             {
                 // Make the end of a full scan impossible to miss, and remember it for next time.
                 var last = new LastScan { Time = DateTime.Now, Files = _maxFiles, Seconds = (int)_elapsed.Elapsed.TotalSeconds, Threats = threats, Review = review };
-                last.Save();
-                StatusText.Text = last.Describe();
+                // A folder or drive scan is its own thing: it must not replace the "last full scan" of the usual places.
+                if (!custom) last.Save();
+                StatusText.Text = custom ? $"Scanned {string.Join(", ", paths!)} · {_maxFiles:N0} files" : last.Describe();
                 var files = _maxFiles > 0 ? $"{_maxFiles:N0} files checked" : "No files were scanned by ClamAV (see the list)";
                 ShowResultCard(
                     threats > 0 ? "Scan complete: possible threats found"
@@ -502,6 +506,31 @@ public partial class MainWindow : Window
         enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
         using var fs = System.IO.File.Create(path);
         enc.Save(fs);
+    }
+
+    /// <summary>Lets the person pick a folder or drive and scans every file in it.</summary>
+    private async void ScanFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (_working) return;
+        var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Choose a folder or drive to scan" };
+        if (dlg.ShowDialog(this) != true || string.IsNullOrWhiteSpace(dlg.FolderName)) return;
+        await RunScanAsync(deep: true, new[] { dlg.FolderName });
+    }
+
+    /// <summary>Scans every file on every fixed drive, after saying plainly that it takes a long time.</summary>
+    private async void ScanAllDrives_Click(object sender, RoutedEventArgs e)
+    {
+        if (_working) return;
+        var drives = System.IO.DriveInfo.GetDrives().Where(d => d.DriveType == System.IO.DriveType.Fixed && d.IsReady).ToList();
+        if (drives.Count == 0) return;
+        var usedGb = drives.Sum(d => (d.TotalSize - d.AvailableFreeSpace) / 1_000_000_000.0);
+        var ok = MessageBox.Show(this,
+            $"Scan every file on {string.Join(", ", drives.Select(d => d.Name))} (about {usedGb:N0} GB in use)?\n\n" +
+            "This can take several hours. You can keep using your PC and Cancel stops it. Nothing is changed or deleted.\n\n" +
+            "The usual full scan already checks the places malware most often lands, in minutes.",
+            "Scan all drives", MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.Cancel);
+        if (ok != MessageBoxResult.OK) return;
+        await RunScanAsync(deep: true, drives.Select(d => d.RootDirectory.FullName).ToList());
     }
 
     /// <summary>Explains Microsoft Defender Offline, then opens Windows Security. pc-guardian never restarts the PC itself.</summary>

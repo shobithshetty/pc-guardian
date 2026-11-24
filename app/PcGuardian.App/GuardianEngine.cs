@@ -33,9 +33,17 @@ public sealed class GuardianEngine
     }
 
     /// <summary>Runs a check. Live progress lines are reported while it works; the final result is returned.</summary>
-    public async Task<RunResult> RunAsync(bool deepScan, IProgress<ProgressEvent>? progress, CancellationToken ct = default)
+    public async Task<RunResult> RunAsync(bool deepScan, IProgress<ProgressEvent>? progress, CancellationToken ct = default,
+        IReadOnlyList<string>? scanPaths = null)
     {
         var switches = deepScan ? " -Scan -CheckUpdates" : "";
+        // Folders or drives to scan in full. They travel as JSON in an environment variable, never on the command line.
+        Dictionary<string, string>? env = null;
+        if (scanPaths is { Count: > 0 })
+        {
+            env = new() { ["PCG_SCANPATHS"] = JsonSerializer.Serialize(scanPaths) };
+            switches = " -ScanPath @(ConvertFrom-Json $env:PCG_SCANPATHS)";
+        }
         var lines = new Progress<string>(line =>
         {
             if (!line.StartsWith(ProgressPrefix, StringComparison.Ordinal)) return;
@@ -44,7 +52,7 @@ public sealed class GuardianEngine
         });
         var (code, stdout, stderr) = await PowerShellAsync(
             Prelude + $"Invoke-GuardianRun -AsObject -Progress{switches} | ConvertTo-Json -Depth 6 -Compress",
-            null, lines, ct);
+            env, lines, ct);
         if (code != 0)
             throw new InvalidOperationException(FirstLine(stderr) ?? $"The scan engine exited with code {code}.");
 
