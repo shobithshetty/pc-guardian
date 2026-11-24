@@ -64,15 +64,38 @@ function Get-RootCertificateAudit {
     # remarkable when the system stores do not have it too ("user-installed": added by you or a program you ran).
     $system = @{}
     foreach ($s in 'Root', 'AuthRoot') {
-        Get-ChildItem -Path "Cert:\LocalMachine\$s" -ErrorAction SilentlyContinue | ForEach-Object { $system[$_.Thumbprint] = $true }
+        foreach ($c in (Get-CertificateStoreItem -Location LocalMachine -Name $s)) { $system[$c.Thumbprint] = $true }
     }
+    $found = 0
     foreach ($store in 'LocalMachine', 'CurrentUser') {
-        Get-ChildItem -Path "Cert:\$store\Root" -ErrorAction SilentlyContinue | ForEach-Object {
-            $detail = "$($_.Subject) (expires $($_.NotAfter.ToString('yyyy-MM-dd')))"
-            if ($store -eq 'CurrentUser' -and -not $system[$_.Thumbprint]) { $detail += '; user-installed, not in the system certificate stores' }
-            New-Finding -Category 'Certificate' -Key "Cert:Root:${store}:$($_.Thumbprint)" -Detail $detail
+        foreach ($c in (Get-CertificateStoreItem -Location $store -Name 'Root')) {
+            $found++
+            $detail = "$($c.Subject) (expires $($c.NotAfter.ToString('yyyy-MM-dd')))"
+            if ($store -eq 'CurrentUser' -and -not $system[$c.Thumbprint]) { $detail += '; user-installed, not in the system certificate stores' }
+            New-Finding -Category 'Certificate' -Key "Cert:Root:${store}:$($c.Thumbprint)" -Detail $detail
         }
     }
+    # Every Windows PC has trusted roots. Finding none means the check could not read them, which must not pass silently.
+    if ($found -eq 0) {
+        New-Finding -Category 'Scanner' -Key 'Cert:Unavailable' -Detail 'Could not read the trusted certificate stores, so the certificate check was skipped.'
+    }
+}
+
+function Get-CertificateStoreItem {
+    <#
+    .SYNOPSIS
+        Reads one certificate store through the .NET API (no dependency on the PowerShell Cert: drive).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Location, [Parameter(Mandatory)][string]$Name)
+    $store = $null
+    try {
+        $store = New-Object System.Security.Cryptography.X509Certificates.X509Store($Name, $Location)
+        $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly -bor [System.Security.Cryptography.X509Certificates.OpenFlags]::OpenExistingOnly)
+        @($store.Certificates)
+    }
+    catch { @() }
+    finally { if ($store) { $store.Close() } }
 }
 
 function Get-HostsFileAudit {

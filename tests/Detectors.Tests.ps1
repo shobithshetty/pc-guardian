@@ -107,6 +107,22 @@ Describe 'ConvertFrom-HayabusaTimeline' {
     }
 }
 
+Describe 'trusted certificate check' {
+    It 'reads the stores without the Cert: drive and finds the same roots as it' {
+        $r = InModuleScope PcGuardian {
+            $viaApi = @(Get-CertificateStoreItem -Location LocalMachine -Name Root).Count
+            $viaDrive = @(Get-ChildItem Cert:\LocalMachine\Root -ErrorAction SilentlyContinue).Count
+            [pscustomobject]@{ Api = $viaApi; Drive = $viaDrive; Findings = @(Get-RootCertificateAudit | Where-Object Category -eq 'Certificate').Count }
+        }
+        $r.Api | Should -BeGreaterThan 0
+        $r.Api | Should -Be $r.Drive
+        $r.Findings | Should -BeGreaterThan 0
+    }
+    It 'says so when a store cannot be read' {
+        @(InModuleScope PcGuardian { Get-CertificateStoreItem -Location LocalMachine -Name 'NoSuchStoreName123' }).Count | Should -Be 0
+    }
+}
+
 Describe 'severity of the extra detectors' {
     It 'alerts on memory injection and event-log detections' {
         InModuleScope PcGuardian { Get-FindingSeverity -Finding (New-Finding -Category 'Memory' -Key 'Memory:x.exe' -Detail 'd') } | Should -Be 'Alert'
