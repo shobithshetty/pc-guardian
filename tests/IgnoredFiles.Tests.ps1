@@ -35,6 +35,16 @@ Describe 'ignoring a flagged file' {
     }
 }
 
+Describe 'detection-rule files are not findings' {
+    It 'drops detections on .yar, .yara and .yarc files wherever they are' {
+        $fs = foreach ($n in 'a.yar', 'b.YARA', 'c.yarc') { [pscustomobject]@{ Category = 'Malware'; Key = "Malware:YARA:C:\Users\x\Temp\$n"; Detail = 'x' } }
+        $keep = [pscustomobject]@{ Category = 'Malware'; Key = 'Malware:C:\Users\x\Temp\evil.exe'; Detail = 'x' }
+        $r = @(InModuleScope PcGuardian -Parameters @{ f = @($fs) + $keep; d = $script:data } { param($f, $d) Remove-SuppressedMalware -Finding $f -DataPath $d })
+        $r.Count | Should -Be 1
+        $r[0].Key | Should -Match 'evil\.exe$'
+    }
+}
+
 Describe 'pc-guardian does not report its own folders' {
     It 'drops a detection inside the data folder but keeps one elsewhere' {
         $own   = [pscustomobject]@{ Category = 'Malware'; Key = "Malware:YARA:$($script:data)\yara\rules\thor-webshells.yar"; Detail = 'x' }
