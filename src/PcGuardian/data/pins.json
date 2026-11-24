@@ -10,5 +10,26 @@
     "commit": "78d979eef87786a613659ee82e55abdd45572a78",
     "approxBytes": 2237836,
     "contentSha256": "1a27e13fa4dc31fad94f5514f970f3e89a1b9c5e2a876c4d77abc2a926eb2eed"
+  },
+  "hayabusa": {
+    "repo": "Yamato-Security/hayabusa",
+    "version": "v4.4.0",
+    "asset": "hayabusa-4.4.0-win-x64.zip",
+    "sha256": "ec2670062531723856e278b058473512884e8c5b8d2d1ad60e48c0c868fbf339",
+    "approxBytes": 16472955,
+    "exe": "hayabusa-4.4.0-win-x64.exe"
+  },
+  "hollowsHunter": {
+    "repo": "hasherezade/hollows_hunter",
+    "version": "v0.4.1.1",
+    "asset": "hollows_hunter64.exe",
+    "sha256": "56a58a8bbf2cec9a5c7c68129e8863af6181fb51dfc25226f1a756aba66b4707",
+    "approxBytes": 1260032
+  },
+  "lolDrivers": {
+    "_note": "A data list, not a program: it is only compared against driver file hashes and never run. It changes as drivers are added, so it cannot be pinned by hash. Size is capped and the content is checked for shape.",
+    "url": "https://www.loldrivers.io/api/drivers.json",
+    "maxBytes": 100000000,
+    "minEntries": 500
   }
 }

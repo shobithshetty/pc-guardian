@@ -56,6 +56,13 @@ function Get-FindingSeverity {
         if ($detail -match 'newest (0|1[0-4]|[1-9]) days? ago') { return 'Alert' }
         return 'Info'
     }
+    # Extra detectors: injected code in a running program and event-log detections are alerts. A driver on the
+    # LOLDrivers list is an alert when listed as malicious; a merely vulnerable one is informational.
+    if ($Finding.Category -in 'Memory', 'EventLog') { return 'Alert' }
+    if ($Finding.Category -eq 'Driver') {
+        if ($Finding.Key -like 'Driver:Malicious:*') { return 'Alert' }
+        return 'Info'
+    }
     # A known-malicious package is an alert; ordinary advisories are informational.
     if ($Finding.Category -eq 'Package') {
         if ($Finding.Key -like 'Package:Malicious:*') { return 'Alert' }

@@ -40,8 +40,150 @@ public sealed class FindingItem
         ("ClickFix:", "Pasted-command trace: "),
         ("Package:Malicious:", "Known-malicious package: "),
         ("Package:Vulnerable:", "Packages with known vulnerabilities: "),
+        ("Memory:", "Injected code in a running program: "),
+        ("Driver:Malicious:", "Malicious driver: "),
+        ("Driver:Vulnerable:", "Vulnerable driver: "),
+        ("EventLog:", "Suspicious activity in event logs: "),
         ("Malware:YARA:", "Rule match: "),
         ("Malware:", "Possible threat: "),
+    };
+
+    /// <summary>Plain-English "what is this and is it normal" line for the row. Empty when there is nothing to add.</summary>
+    public string Explanation
+    {
+        get
+        {
+            if (Key.StartsWith("Port:", StringComparison.Ordinal))
+            {
+                var parts = Key.Split(':');
+                var port = parts.Length > 1 ? parts[1] : "?";
+                var proc = parts.Length > 2 ? parts[2] : "a program";
+                var m = System.Text.RegularExpressions.Regex.Match(Detail, @"on (\S+)");
+                var addr = m.Success ? m.Groups[1].Value : "";
+                string reach =
+                    addr is "127.0.0.1" or "::1" ? "Only this PC can connect to it."
+                    : addr.StartsWith("100.", StringComparison.Ordinal) ? "Reachable over your Tailscale/VPN network."
+                    : "Other devices on your network may be able to connect to it.";
+                string who = ProcessNotes.TryGetValue(proc.ToLowerInvariant(), out var note)
+                    ? note : $"The program \"{proc}\" is waiting for connections.";
+                return $"{who} Port {port}. {reach} Normal if you run this program; unexpected if you don't.";
+            }
+            if (Key.StartsWith("Task:", StringComparison.Ordinal))
+            {
+                if (Key.Contains("SoftLanding", StringComparison.OrdinalIgnoreCase))
+                    return "A built-in Windows task that manages Action Center tips and notifications. Normal on Windows 11.";
+                return "A task Windows runs on a schedule or at sign-in. New ones are worth a look if you didn't install something recently.";
+            }
+            if (Key.StartsWith("Exposure:Config:", StringComparison.Ordinal))
+            {
+                var what = Key["Exposure:Config:".Length..];
+                if (what.StartsWith("Firewall", StringComparison.Ordinal))
+                    return "The Windows Firewall blocks unwanted incoming connections. Turn it back on in Windows Security unless another firewall replaces it.";
+                return what switch
+                {
+                    "SMB1" => "SMBv1 is an old file-sharing protocol that ransomware worms used (WannaCry). Almost nobody needs it; turn it off in Windows Features.",
+                    "UAC" => "User Account Control asks before programs make big changes. With it off, malware gets full rights silently. Turn it on.",
+                    "RDP" => "Remote Desktop lets others sign in to this PC over the network. Fine if you use it; otherwise turn it off.",
+                    "AutoLogon" => "Windows signs in without a password, and the password is kept in the registry where other programs can read it.",
+                    "Guest" => "A shared Guest account is enabled. Most people never need it.",
+                    "DefenderRealTime" => "Microsoft Defender's live protection is off, so nothing is watching files as they open. Turn it on in Windows Security.",
+                    "DefenderSignatures" => "Defender's threat definitions are old, so it can miss new malware. Run Windows Update.",
+                    "WindowsUpdate" => "Windows hasn't installed updates in a while. Updates close security holes attackers use.",
+                    _ => "A setting that makes this PC easier to attack."
+                };
+            }
+            if (Key.StartsWith("Exposure:Update:", StringComparison.Ordinal))
+                return "A newer version of this app exists. Updates often fix security holes. Update it from the app or with winget.";
+            if (Key.StartsWith("Defender:Exclusion:", StringComparison.Ordinal))
+                return "You or a program told Microsoft Defender not to scan this. Malware also does this to hide. Fine for developer folders you chose; suspicious if you didn't set it.";
+            if (Key.StartsWith("WMI:", StringComparison.Ordinal))
+                return "WMI can run a script or command in the background when something happens. Some PC makers (Dell, HP) use it; attackers use it to stay hidden.";
+            if (Key.StartsWith("Service:", StringComparison.Ordinal))
+                return "A program that runs in the background without a window. Check the file path: it should belong to software you installed.";
+            if (Key.StartsWith("Cert:Root:", StringComparison.Ordinal))
+                return "A root certificate makes your PC trust every site and file that authority vouches for. One you installed yourself (company VPN, proxy tool) is fine; an unknown one can let someone intercept your traffic.";
+            if (Key.StartsWith("Hosts:", StringComparison.Ordinal))
+                return "The hosts file overrides what a website name points to. Developers use it; malware uses it to send you to fake sites.";
+            if (Key.StartsWith("Extension:", StringComparison.Ordinal))
+                return "A browser add-on. It can see pages you visit; keep only ones you recognize. Some extensions have broad access (all sites, cookies), which is normal for password managers but worth knowing.";
+            if (Key.StartsWith("Credential:SshKey:", StringComparison.Ordinal))
+                return "An SSH key unlocks servers or GitHub. Without a passphrase, anyone who copies the file can use it. Add one with ssh-keygen -p.";
+            if (Key.StartsWith("Credential:", StringComparison.Ordinal))
+                return "A password or token is saved as plain text in a file. Infostealer malware looks for these files first. Move it to a password manager or environment secret, and rotate it if it was ever shared.";
+            if (Key.StartsWith("ClickFix:", StringComparison.Ordinal))
+                return "A command that looks like the \"paste this into Run/PowerShell to fix an error\" trick used to install malware. If you pasted something like this, treat the PC as possibly infected.";
+            if (Key.StartsWith("Package:Malicious:", StringComparison.Ordinal))
+                return "A code package in one of your projects is on a public list of known malicious packages. Remove it and rotate any secrets on that machine.";
+            if (Key.StartsWith("Package:Vulnerable:", StringComparison.Ordinal))
+                return "Your project uses packages with published security bugs. Update them when you can.";
+            if (Key.StartsWith("KnownExploited:", StringComparison.Ordinal))
+                return "Attackers are actively exploiting a recent flaw in software you have installed (US CISA list). Update this software.";
+            if (Key.StartsWith("Memory:", StringComparison.Ordinal))
+                return "A running program has code in its memory that doesn't come from its own file, a trick malware uses to hide inside normal programs. Security tools, game anti-cheat and some installers do it legitimately. If you don't recognize the program, treat it as serious.";
+            if (Key.StartsWith("Driver:Malicious:", StringComparison.Ordinal))
+                return "This driver file matches a known malicious driver. Drivers run with full control of Windows. Treat the PC as possibly compromised and check it with another scanner.";
+            if (Key.StartsWith("Driver:Vulnerable:", StringComparison.Ordinal))
+                return "A legitimate signed driver with a known security flaw that attackers load to switch off security tools. Not an infection by itself. Update the software that installed it, or remove it if you no longer use it.";
+            if (Key.StartsWith("EventLog:", StringComparison.Ordinal))
+                return "Windows' own activity log shows something matching a known attack pattern in the last 30 days. Detection rules can false-positive, especially for admin and developer tools. Search the rule name to see what triggers it.";
+            if (Key.StartsWith("Malware:", StringComparison.Ordinal))
+                return "A scanner thinks this file matches known malware. Don't open it. Check it on virustotal.com before deleting; false alarms happen.";
+            return Category switch
+            {
+                "Startup" => "A program set to start automatically when you sign in. Fine for apps you use; unfamiliar ones are worth a search.",
+                "Account" => "A Windows account on this PC. Administrators have full control, so only accounts you recognize should be there.",
+                "Defender" => "A Microsoft Defender status reading.",
+                _ => ""
+            };
+        }
+    }
+
+    public bool HasExplanation => Explanation.Length > 0;
+
+    /// <summary>What to search for. Built only from names that are the same on every PC: never user names, file paths, account IDs or secrets.</summary>
+    public string SearchQuery
+    {
+        get
+        {
+            var p = Key.Split(':');
+            if (Key.StartsWith("Port:", StringComparison.Ordinal) && p.Length > 2) return $"what is {p[2]} listening on port {p[1]} windows";
+            if (Key.StartsWith("Task:", StringComparison.Ordinal))
+            {
+                var name = Key.Substring(Key.LastIndexOf('\\') + 1);
+                return $"windows scheduled task {name}";
+            }
+            if (Key.StartsWith("Startup:", StringComparison.Ordinal) || Key.StartsWith("StartupFolder:", StringComparison.Ordinal))
+                return $"windows startup item {p[^1]} what is it";
+            if (Key.StartsWith("Service:", StringComparison.Ordinal)) return $"windows service {p[1]} what is it";
+            if (Key.StartsWith("Extension:", StringComparison.Ordinal) && p.Length > 2) return $"{p[2]} {p[1]} browser extension safe";
+            if (Key.StartsWith("Hosts:", StringComparison.Ordinal)) return $"hosts file entry {p[1]}";
+            if (Key.StartsWith("WMI:", StringComparison.Ordinal)) return "WMI event consumer persistence legitimate or malware";
+            if (Key.StartsWith("Defender:Exclusion:", StringComparison.Ordinal)) return "Microsoft Defender exclusion suspicious";
+            if (Key.StartsWith("Cert:Root:", StringComparison.Ordinal)) return "user installed trusted root certificate windows risk";
+            if (Key.StartsWith("Credential:", StringComparison.Ordinal)) return "plain text API token in file risk how to fix";
+            if (Key.StartsWith("ClickFix:", StringComparison.Ordinal)) return "ClickFix malware paste command into Run box";
+            if (Key.StartsWith("Exposure:Config:", StringComparison.Ordinal)) return $"windows {p[^1]} security setting should it be on";
+            if (Key.StartsWith("Exposure:Update:", StringComparison.Ordinal)) return "";
+            if (Key.StartsWith("Memory:", StringComparison.Ordinal)) return "injected code in running process memory legitimate or malware " + (p.Length > 1 && p[1] != "Suspicious" ? p[1] : "");
+            if (Key.StartsWith("Driver:", StringComparison.Ordinal) && p.Length > 2) return $"{p[2]} driver loldrivers vulnerable or malicious";
+            if (Key.StartsWith("EventLog:", StringComparison.Ordinal)) return Key.Substring("EventLog:".Length) + " windows event detection hayabusa sigma";
+            if (Key.StartsWith("Malware:", StringComparison.Ordinal)) return "malware scanner detection how to check false positive";
+            return Key.Length > 80 ? "" : Key;
+        }
+    }
+
+    public bool CanSearch => SearchQuery.Length > 0;
+
+    private static readonly Dictionary<string, string> ProcessNotes = new()
+    {
+        ["node"] = "Node.js, usually a web or development server you started.",
+        ["ollama"] = "Ollama, the local AI model server.",
+        ["python"] = "A Python program, often a script or local server you ran.",
+        ["services"] = "Windows Service Control Manager, part of Windows itself.",
+        ["svchost"] = "A Windows system process that hosts built-in services.",
+        ["lsass"] = "Windows sign-in security process.",
+        ["spoolsv"] = "The Windows print spooler.",
+        ["wininit"] = "Windows startup process.",
     };
 
     /// <summary>The label and colour class of the pill on the row: Threat, Alert or Info.</summary>
@@ -63,6 +205,7 @@ public sealed class ScannerStatus
     public bool DatabaseReady { get; set; }
     public int? DatabaseAgeDays { get; set; }
     public bool YaraReady { get; set; }
+    public bool DetectorsReady { get; set; }
     public bool Ready { get; set; }
 
     /// <summary>True when the virus database is older than the daily refresh should allow.</summary>

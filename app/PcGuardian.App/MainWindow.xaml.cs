@@ -455,6 +455,26 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "pc-guardian", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
 
+    /// <summary>Explains Microsoft Defender Offline, then opens Windows Security. pc-guardian never restarts the PC itself.</summary>
+    private void OfflineScan_Click(object sender, RoutedEventArgs e)
+    {
+        var ok = MessageBox.Show(this,
+            "Some malware (rootkits) can hide while Windows is running. Microsoft Defender Offline scans before Windows loads, so nothing can hide.\n\n" +
+            "This opens Windows Security. There, choose Scan options, then \"Microsoft Defender Antivirus (offline scan)\", then Scan now.\n\n" +
+            "Your PC will restart and the scan takes about 15 minutes. Save your work first.\n\nOpen Windows Security now?",
+            "Scan before Windows starts", MessageBoxButton.OKCancel, MessageBoxImage.Information);
+        if (ok != MessageBoxResult.OK) return;
+        try { Process.Start(new ProcessStartInfo("windowsdefender://threat/") { UseShellExecute = true }); }
+        catch (Exception ex) { MessageBox.Show(this, "Could not open Windows Security: " + ex.Message, "pc-guardian", MessageBoxButton.OK, MessageBoxImage.Warning); }
+    }
+
+    /// <summary>Opens a Google search for the item in the default browser. The query holds only generic names (see FindingItem.SearchQuery).</summary>
+    private void Search_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: FindingItem item } || item.SearchQuery.Length == 0) return;
+        AppInfo.OpenLink("https://www.google.com/search?q=" + Uri.EscapeDataString(item.SearchQuery));
+    }
+
     private async void MarkSafe_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: FindingItem item } || item.IsMalware) return;

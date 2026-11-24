@@ -12,6 +12,8 @@
         <MenuItem Header="_File">
             <MenuItem Header="_Quick check" Click="QuickCheck_Click"/>
             <MenuItem Header="_Full scan" Click="Scan_Click"/>
+            <MenuItem Header="Scan before Windows _starts (Defender Offline)..." Click="OfflineScan_Click"
+                      ToolTip="Finds rootkits that hide while Windows is running. Opens Windows Security; your PC restarts."/>
             <Separator/>
             <MenuItem Header="_Settings..." InputGestureText="Ctrl+," Click="Settings_Click"/>
             <Separator/>
@@ -151,9 +153,26 @@
                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Key}"/>
                                             <TextBlock Text="{Binding Detail}" Margin="0,2,0,0" TextWrapping="Wrap" MaxHeight="40"
                                                        TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextSecondary}" ToolTip="{Binding Detail}"/>
+                                            <TextBlock Text="{Binding Explanation}" Margin="0,3,0,0" TextWrapping="Wrap" FontSize="12"
+                                                       Foreground="{DynamicResource TextSecondary}" FontStyle="Italic">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasExplanation}" Value="False">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
-                                        <Button Grid.Column="2" Content="Mark as safe" Style="{StaticResource SoftButton}" Padding="12,5"
-                                                VerticalAlignment="Center" Tag="{Binding}" Click="MarkSafe_Click" IsEnabled="{Binding CanMarkSafe}"/>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="What is this?" Style="{StaticResource SoftButton}" Padding="12,5" Margin="0,0,8,0"
+                                                    Tag="{Binding}" Click="Search_Click" IsEnabled="{Binding CanSearch}"
+                                                    ToolTip="Opens a Google search in your browser. Nothing personal is included."/>
+                                            <Button Content="Mark as safe" Style="{StaticResource SoftButton}" Padding="12,5"
+                                                    Tag="{Binding}" Click="MarkSafe_Click" IsEnabled="{Binding CanMarkSafe}"/>
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

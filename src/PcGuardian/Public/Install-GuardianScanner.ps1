@@ -27,12 +27,13 @@ function Install-GuardianScanner {
     param(
         [switch]$ClamAv,
         [switch]$Yara,
+        [switch]$Detectors,
         [switch]$InstallClamAv,
         [switch]$Progress,
         [string]$DataPath = (Get-GuardianDataPath)
     )
 
-    if (-not ($ClamAv -or $Yara)) { $ClamAv = $true; $Yara = $true }
+    if (-not ($ClamAv -or $Yara -or $Detectors)) { $ClamAv = $true; $Yara = $true; $Detectors = $true }
     # Windows PowerShell 5.1 does not enable TLS 1.2 by default; GitHub requires it.
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     New-Item -ItemType Directory -Force -Path $DataPath | Out-Null
@@ -52,7 +53,7 @@ function Install-GuardianScanner {
     $script:ProgressEnabled = [bool]$Progress
     $script:PhaseIndex = 0
     $yaraPhases = if (-not $Yara) { 0 } elseif ($yaraCurrent) { 1 } else { 3 }
-    $script:PhaseTotal = [int][bool]$needClamInstall + [int][bool]$ClamAv + $yaraPhases
+    $script:PhaseTotal = [int][bool]$needClamInstall + [int][bool]$ClamAv + $yaraPhases + (3 * [int][bool]$Detectors)
 
     if ($needClamInstall) {
         Start-GuardianPhase -Name 'Installing ClamAV (Windows may ask for permission)'
@@ -145,4 +146,6 @@ function Install-GuardianScanner {
             Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
+
+    if ($Detectors) { Install-DetectorFiles -DataPath $DataPath }
 }

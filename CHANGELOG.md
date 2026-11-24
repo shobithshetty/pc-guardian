@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Three more detectors in the full scan, downloaded once (pinned and hash-checked): **HollowsHunter** finds
+  injected or hollowed code inside running programs; **Hayabusa** hunts the last 30 days of Windows event logs
+  with Sigma-based rules (high and critical only); the **LOLDrivers** list flags vulnerable or malicious driver
+  files. All read-only. Not yet tested: the real HollowsHunter report for a detection (format inferred, handled
+  defensively) and a full download through `Install-DetectorFiles`.
+- File > "Scan before Windows starts (Defender Offline)": explains it, then opens Windows Security. pc-guardian never
+  restarts the PC itself.
+- Every result row now has a plain-English explanation and a "What is this?" button that opens a Google search. The
+  search text contains only generic names (never your user name, file paths or secrets).
+- The pin watcher also checks Hayabusa and HollowsHunter.
+
 - Staying current: opt-in known-exploited check (installed apps vs the US CISA list; recent additions only, matched
   by name, public file cached for a day), opt-in update notice (checks GitHub once a day, never installs), and a
   maintainer-side pin watcher (`tools/Check-Pins.ps1`, daily workflow that opens one issue; Dependabot for Actions).

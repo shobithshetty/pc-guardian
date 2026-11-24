@@ -9,6 +9,9 @@ project trusts and how that trust is limited.
 |---|---|
 | YARA program | Exact release and SHA-256 in `src/PcGuardian/data/pins.json`. A mismatch aborts the install. |
 | YARA rules (`Neo23x0/signature-base`) | Exact commit plus a content hash of all rule files. A mismatch aborts the install. |
+| Hayabusa (event-log hunting, AGPL-3.0, run as a separate program) and its bundled rules | Exact release and SHA-256 in `pins.json`. A mismatch installs nothing. |
+| HollowsHunter (injected-code scan, BSD-2) | Exact release and SHA-256 in `pins.json`. Run with options that write, kill and suspend nothing. |
+| LOLDrivers list (vulnerable drivers, Apache-2.0) | Data only, compared against driver hashes and never run. It changes as drivers are added, so it is not pinned by hash: it is size-capped, shape-checked and refreshed weekly. |
 | ClamAV program | Installed separately by the user (winget). Not bundled. |
 | ClamAV virus database | Downloaded by `freshclam`, which verifies the signed `.cvd` files itself. |
 | CI actions | Referenced by full commit SHA, not by tag. |

@@ -79,6 +79,24 @@ try {
     } else { $lines.Add("- Rules are current (commit $($pins.rules.commit.Substring(0, 8)) is the branch head).") }
 } catch { $errors.Add("Rules check failed: $($_.Exception.Message)") }
 
+# --- Hayabusa and HollowsHunter (programs pinned by hash in pins.json) -------------------------
+foreach ($t in @(
+        @{ Name = 'Hayabusa'; Key = 'hayabusa'; Pin = $pins.hayabusa; Pattern = '*win-x64.zip' },
+        @{ Name = 'HollowsHunter'; Key = 'hollowsHunter'; Pin = $pins.hollowsHunter; Pattern = 'hollows_hunter64.exe' })) {
+    try {
+        $rel = Get-Gh "repos/$($t.Pin.repo)/releases/latest"
+        if ($rel.tag_name -ne $t.Pin.version) {
+            $asset = @($rel.assets | Where-Object { $_.name -like $t.Pattern })[0]
+            $digest = if ($asset -and $asset.PSObject.Properties['digest']) { "$($asset.digest)" } else { 'not published' }
+            $updates.Add([pscustomobject]@{ Name = $t.Name; Current = $t.Pin.version; Latest = $rel.tag_name })
+            $lines.Add("### $($t.Name): $($t.Pin.version) -> $($rel.tag_name)")
+            $lines.Add("- Release notes: $($rel.html_url)")
+            if ($asset) { $lines.Add("- New asset: ``$($asset.name)``, digest: ``$digest``") }
+            $lines.Add("- Check: the release notes and licence, then update ``$($t.Key)`` in ``src/PcGuardian/data/pins.json`` (version, asset, sha256) and run the tests.")
+        } else { $lines.Add("- $($t.Name) is current ($($t.Pin.version)).") }
+    } catch { $errors.Add("$($t.Name) check failed: $($_.Exception.Message)") }
+}
+
 # --- Inno Setup --------------------------------------------------------------------------------
 try {
     $workflow = Get-Content -Path (Join-Path $root '.github\workflows\release.yml') -Raw

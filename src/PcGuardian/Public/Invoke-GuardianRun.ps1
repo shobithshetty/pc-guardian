@@ -44,7 +44,10 @@ function Invoke-GuardianRun {
     $usePkg = [bool]$CheckPackages -or ([bool]$Scan -and [bool](Get-GuardianSetting -DataPath $DataPath).osv)
     # A full scan also looks for stolen-credential and ClickFix traces (one more step).
     $useKev = [bool]$CheckKnownExploited -or ([bool]$Scan -and [bool](Get-GuardianSetting -DataPath $DataPath).knownExploited)
-    $script:PhaseTotal = 3 + 2 * [int][bool]$Scan + [int][bool]$Scan + [int]$useVt + [int]$usePkg + [int]$useKev + [int][bool]$CheckUpdates
+    # A full scan also runs whichever extra detectors were downloaded (drivers, memory, event logs), one step each.
+    $det = Find-GuardianDetector -DataPath $DataPath
+    $detSteps = if ($Scan) { [int][bool]$det.LolDrivers + [int][bool]$det.HollowsHunter + [int][bool]$det.Hayabusa } else { 0 }
+    $script:PhaseTotal = 3 + 2 * [int][bool]$Scan + [int][bool]$Scan + $detSteps + [int]$useVt + [int]$usePkg + [int]$useKev + [int][bool]$CheckUpdates
 
     $donateNote = if ($NoDonateNote -or $AsObject) { @() } else {
         @('', 'pc-guardian is free and open source. Support it: see the Sponsor button on the GitHub repo. Hide this line with -NoDonateNote.')
@@ -86,6 +89,18 @@ function Invoke-GuardianRun {
             $scanFindings += @(Invoke-ClamAvScan -Path $scanPaths)
             Start-GuardianPhase -Name 'Scanning files with YARA rules'
             $scanFindings += @(Invoke-YaraScan -Path $scanPaths)
+            if ($det.LolDrivers) {
+                Start-GuardianPhase -Name 'Checking drivers against the vulnerable-driver list'
+                $scanFindings += @(Invoke-DriverCheck -ListPath $det.LolDrivers)
+            }
+            if ($det.HollowsHunter) {
+                Start-GuardianPhase -Name 'Looking for injected code inside running programs'
+                $scanFindings += @(Invoke-MemoryScan)
+            }
+            if ($det.Hayabusa) {
+                Start-GuardianPhase -Name 'Hunting suspicious activity in Windows event logs'
+                $scanFindings += @(Invoke-EventLogScan)
+            }
         }
         if ($useVt) {
             Start-GuardianPhase -Name 'Looking up file hashes on VirusTotal'

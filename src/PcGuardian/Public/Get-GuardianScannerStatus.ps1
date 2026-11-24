@@ -18,11 +18,14 @@ function Get-GuardianScannerStatus {
         $age = [int][math]::Floor(((Get-Date) - $newest).TotalDays)
     }
     $yaraReady = [bool]($yara -and (Test-Path $yara.Rules))
+    $det = Find-GuardianDetector -DataPath $DataPath
+    $detReady = [bool]($det.Hayabusa -and $det.HollowsHunter -and $det.LolDrivers)
     [pscustomobject]@{
         ClamAvInstalled = [bool]$clam
         DatabaseReady   = ($dbFiles.Count -gt 0)
         DatabaseAgeDays = $age
         YaraReady       = $yaraReady
-        Ready           = ([bool]$clam -and ($dbFiles.Count -gt 0) -and $yaraReady)
+        DetectorsReady  = $detReady
+        Ready           = ([bool]$clam -and ($dbFiles.Count -gt 0) -and $yaraReady -and $detReady)
     }
 }
