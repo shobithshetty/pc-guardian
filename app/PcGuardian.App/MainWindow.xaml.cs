@@ -455,6 +455,55 @@ public partial class MainWindow : Window
         catch (Exception ex) { MessageBox.Show(this, ex.Message, "pc-guardian", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
 
+    /// <summary>
+    /// Developer aid: fills the window with sample results and saves a picture of it, without showing it or running
+    /// the engine (start the app with --screenshot file.png [--scenario info|mixed|threats]). Lets the look of the real
+    /// window be checked without a person clicking through it.
+    /// </summary>
+    internal void RenderScreenshot(string path, string scenario, int width = 980, int height = 760)
+    {
+        FindingItem F(string sev, string cat, string key, string detail) =>
+            new() { Kind = "Scan", Severity = sev, Category = cat, Key = key, Detail = detail };
+        var info = new[]
+        {
+            F("Info", "Task", @"Task:\SoftLanding\S-1-5-21-1-2-3-1002\ActionCenterDeferralTask-{3de30000-0000-0000-0000-000000000000}", ""),
+            F("Info", "Port", "Port:3000:node", "Listening on 0.0.0.0 (node)"),
+            F("Info", "Port", "Port:8765:python", "Listening on 100.72.232.65 (python)"),
+        };
+        var mixed = new[]
+        {
+            F("Alert", "Memory", "Memory:updater.exe", "x"),
+            F("Alert", "EventLog", "EventLog:Suspicious Service Installation Script", "3 event(s) matched this detection rule (level: high), most recent 2026-11-20."),
+            F("Info", "Driver", "Driver:Vulnerable:RTCore64.sys", "vulnerable driver on the LOLDrivers list (listed as: RTCore64.sys) at C:\\Windows\\System32\\drivers\\RTCore64.sys"),
+            F("Info", "Certificate", "Cert:Root:LocalMachine:EC2C834072AF269510FF0EF203EE3170F6789DCA", "CN=SSL.com TLS RSA Root CA 2022, O=SSL Corporation, C=US (expires 2046-08-19)"),
+            F("Alert", "Exposure", "Exposure:Config:UAC", "User Account Control is disabled."),
+        };
+        var threats = new[]
+        {
+            F("Alert", "Malware", @"Malware:C:\Users\me\Downloads\invoice.exe", "ClamAV detected Win.Trojan.Agent-123"),
+            F("Alert", "Malware", @"Malware:YARA:C:\Users\me\AppData\Local\Temp\x.dll", "YARA rule APT_Sample (author: someone) matched; public rules can false-positive, review the file"),
+        };
+        _items.Clear();
+        foreach (var f in scenario switch { "mixed" => mixed, "threats" => threats, "empty" => Array.Empty<FindingItem>(), _ => info }) _items.Add(f);
+        UpdateHeadline(null);
+        StatusText.Text = "Last full scan: today 9:41 PM  ·  7,787 files  ·  " + _items.Count + " items";
+        ProtectionText.Text = "Protection data updated today";
+
+        var root = (FrameworkElement)Content;
+        root.Measure(new Size(width, height));
+        root.Arrange(new Rect(0, 0, width, height));
+        root.UpdateLayout();
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen()) dc.DrawRectangle(Background, null, new Rect(0, 0, width, height));
+        var bmp = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        bmp.Render(visual);
+        bmp.Render(root);
+        var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
+        using var fs = System.IO.File.Create(path);
+        enc.Save(fs);
+    }
+
     /// <summary>Explains Microsoft Defender Offline, then opens Windows Security. pc-guardian never restarts the PC itself.</summary>
     private void OfflineScan_Click(object sender, RoutedEventArgs e)
     {

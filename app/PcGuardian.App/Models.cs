@@ -44,6 +44,34 @@ public sealed class FindingItem
                 leaf = System.Text.RegularExpressions.Regex.Replace(leaf, @"[-_ ]?\{[0-9a-fA-F-]{36}\}$", "");
                 if (leaf.Length > 0) return "Scheduled task: " + leaf;
             }
+            // Windows settings: say what is wrong in a sentence.
+            if (Key.StartsWith("Exposure:Config:", StringComparison.Ordinal))
+            {
+                var what = Key["Exposure:Config:".Length..];
+                if (what.StartsWith("Firewall:", StringComparison.Ordinal)) return $"Firewall is off ({what["Firewall:".Length..]} network)";
+                return what switch
+                {
+                    "SMB1" => "Old file sharing (SMBv1) is on",
+                    "UAC" => "User Account Control is off",
+                    "RDP" => "Remote Desktop is on",
+                    "AutoLogon" => "Automatic sign-in is on",
+                    "Guest" => "Guest account is on",
+                    "DefenderRealTime" => "Defender live protection is off",
+                    "DefenderSignatures" => "Defender threat definitions are out of date",
+                    "DefenderUnreadable" => "Could not read Defender's status",
+                    "WindowsUpdate" => "Windows updates are overdue",
+                    _ => "Windows setting: " + what
+                };
+            }
+            if (Key.StartsWith("Exposure:Update:", StringComparison.Ordinal)) return "App update available: " + Key[(Key.LastIndexOf(':') + 1)..];
+            // Certificates: show who it is for and where it applies, not the thumbprint.
+            if (Key.StartsWith("Cert:Root:", StringComparison.Ordinal))
+            {
+                var parts = Key.Split(':');
+                var cn = System.Text.RegularExpressions.Regex.Match(Detail, @"CN=([^,]+)");
+                var where = parts.Length > 2 && parts[2] == "CurrentUser" ? "your account" : "this PC";
+                if (cn.Success) return $"Trusted root certificate ({where}): {cn.Groups[1].Value.Trim()}";
+            }
             if (Key.StartsWith("StartupFolder:", StringComparison.Ordinal)) return "Startup folder item: " + Key["StartupFolder:".Length..];
             if (Key.StartsWith("Startup:", StringComparison.Ordinal))
             {

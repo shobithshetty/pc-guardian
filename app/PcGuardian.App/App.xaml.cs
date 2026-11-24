@@ -19,7 +19,20 @@ public partial class App : Application
             return;
         }
 
-        if (IsWindowsInDarkMode()) ApplyDarkTheme();
+        var args = e.Args;
+        var shot = Array.IndexOf(args, "--screenshot");
+        var dark = args.Contains("--dark") || (!args.Contains("--light") && IsWindowsInDarkMode());
+        if (dark) ApplyDarkTheme();
+
+        // Developer aid: draw the window with sample data into a picture and exit, showing nothing on screen.
+        if (shot >= 0 && shot + 1 < args.Length)
+        {
+            var sc = Array.IndexOf(args, "--scenario");
+            try { new MainWindow(new GuardianEngine(module)).RenderScreenshot(args[shot + 1], sc >= 0 && sc + 1 < args.Length ? args[sc + 1] : "info"); Shutdown(0); }
+            catch (Exception ex) { System.IO.File.WriteAllText(args[shot + 1] + ".error.txt", ex.ToString()); Shutdown(2); }
+            return;
+        }
+
         new MainWindow(new GuardianEngine(module)).Show();
     }
 
