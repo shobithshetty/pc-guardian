@@ -63,6 +63,11 @@ function Get-FindingSeverity {
         if ($Finding.Key -like 'Driver:Malicious:*') { return 'Alert' }
         return 'Info'
     }
+    # A connected phone: a known spy app or open wireless debugging is an alert; the rest is for the person to judge.
+    if ($Finding.Category -eq 'Phone') {
+        if ($Finding.Key -like 'Phone:Stalkerware:*' -or $Finding.Key -eq 'Phone:WirelessDebugging') { return 'Alert' }
+        return 'Info'
+    }
     # A known-malicious package is an alert; ordinary advisories are informational.
     if ($Finding.Category -eq 'Package') {
         if ($Finding.Key -like 'Package:Malicious:*') { return 'Alert' }
