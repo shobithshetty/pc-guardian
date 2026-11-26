@@ -31,5 +31,24 @@
     "url": "https://www.loldrivers.io/api/drivers.json",
     "maxBytes": 100000000,
     "minEntries": 500
+  },
+  "adb": {
+    "_note": "Google's Android platform-tools, used read-only for the phone check. Downloaded from Google only after the person accepts the Android SDK License. Google publishes SHA-1 only; the SHA-256 was computed once and is pinned.",
+    "version": "r37.0.3",
+    "url": "https://dl.google.com/android/repository/platform-tools_r37.0.3-win.zip",
+    "sha1": "7fea85bc18d0480bc81d3603952d666f49496e5a",
+    "sha256": "89d108360a3bf2924d3bea837239edaccc22fd6ff5befd3787c4348a9fe4f09d",
+    "approxBytes": 8188601,
+    "exe": "platform-tools\\adb.exe",
+    "signer": "Google LLC",
+    "licenseUrl": "https://developer.android.com/studio/terms"
+  },
+  "phoneLists": {
+    "_note": "Data lists, never run. Public stalkerware indicators from the original repository (no licence is stated, so they are fetched to the person's PC at use and never shipped). Size-capped and shape-checked.",
+    "repo": "AssoEchap/stalkerware-indicators",
+    "stalkerwareUrl": "https://raw.githubusercontent.com/AssoEchap/stalkerware-indicators/master/ioc.yaml",
+    "watchwareUrl": "https://raw.githubusercontent.com/AssoEchap/stalkerware-indicators/master/watchware.yaml",
+    "maxBytes": 2000000,
+    "minPackages": 300
   }
 }

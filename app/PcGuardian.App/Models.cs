@@ -9,7 +9,8 @@ public sealed class FindingItem
     public string Key { get; set; } = "";
     public string Detail { get; set; } = "";
 
-    public bool IsMalware => Category == "Malware";
+    // A spy app found on a phone is treated like malware on the PC: shown as a threat and never dismissible with "Mark as safe".
+    public bool IsMalware => Category == "Malware" || Key.StartsWith("Phone:Stalkerware:", StringComparison.Ordinal);
     public bool IsAlert => Severity == "Alert";
     public bool CanMarkSafe => !IsMalware;
 
@@ -297,6 +298,44 @@ public sealed class AppSettings
     public bool KnownExploited { get; set; }
     public bool UpdateCheck { get; set; }
     public List<string> DevFolders { get; set; } = new();
+}
+
+/// <summary>One Android device that adb can see. Only devices in the "device" state have approved this PC.</summary>
+public sealed class PhoneDevice
+{
+    public string Serial { get; set; } = "";
+    public string State { get; set; } = "";
+    public string Model { get; set; } = "";
+    public string Transport { get; set; } = "usb";
+
+    public bool Ready => State == "device";
+    public string Label => (string.IsNullOrWhiteSpace(Model) ? "Android device" : Model.Replace('_', ' ')) +
+                           (Transport == "wireless" ? " (wireless)" : " (USB)");
+}
+
+/// <summary>Get-GuardianPhoneStatus: are the phone tools downloaded, and which devices are connected?</summary>
+public sealed class PhoneStatus
+{
+    public bool ToolsReady { get; set; }
+    public List<PhoneDevice> Devices { get; set; } = new();
+}
+
+public sealed class PhoneInfo
+{
+    public string Serial { get; set; } = "";
+    public string Model { get; set; } = "";
+    public string? Android { get; set; }
+    public string? SecurityPatch { get; set; }
+}
+
+/// <summary>Invoke-GuardianPhoneCheck: what the read-only check of one phone found.</summary>
+public sealed class PhoneResult
+{
+    public PhoneInfo Device { get; set; } = new();
+    public int Packages { get; set; }
+    public int ThirdParty { get; set; }
+    public List<string> Checked { get; set; } = new();
+    public List<FindingItem> Items { get; set; } = new();
 }
 
 /// <summary>Get-GuardianUpdateInfo: is a newer pc-guardian release on GitHub?</summary>

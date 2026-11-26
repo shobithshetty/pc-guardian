@@ -482,13 +482,21 @@ public partial class MainWindow : Window
             F("Info", "Certificate", "Cert:Root:LocalMachine:EC2C834072AF269510FF0EF203EE3170F6789DCA", "CN=SSL.com TLS RSA Root CA 2022, O=SSL Corporation, C=US (expires 2046-08-19)"),
             F("Alert", "Exposure", "Exposure:Config:UAC", "User Account Control is disabled."),
         };
+        var phone = new[]
+        {
+            F("Alert", "Phone", "Phone:Stalkerware:com.spy.one", "SpyOne (stalkerware) is installed on samsung SM-T505: package com.spy.one. This kind of app secretly reports the phone owner's location, messages and more."),
+            F("Alert", "Phone", "Phone:WirelessDebugging", "Wireless debugging is on: a computer on the same Wi-Fi that was paired once can control this phone. Turn it off in Developer options when you are not using it."),
+            F("Info", "Phone", "Phone:Accessibility:com.x8bit.bitwarden", "Is an accessibility service: it can read the screen and what is typed. Normal for screen readers and password managers; a common stalkerware trick otherwise."),
+            F("Info", "Phone", "Phone:Sideloaded:app.meridian.focusclock.preview", "Installed from outside the app stores (installer: null). Fine if you installed it yourself from a file; worth a look if not."),
+            F("Info", "Phone", "Phone:SecurityPatch", "The last Android security update is dated 2024-06-01 (30 months ago). Old phones miss fixes for flaws that spyware uses."),
+        };
         var threats = new[]
         {
             F("Alert", "Malware", @"Malware:C:\Users\me\Downloads\invoice.exe", "ClamAV detected Win.Trojan.Agent-123"),
             F("Alert", "Malware", @"Malware:YARA:C:\Users\me\AppData\Local\Temp\x.dll", "YARA rule APT_Sample (author: someone) matched; public rules can false-positive, review the file"),
         };
         _items.Clear();
-        foreach (var f in scenario switch { "mixed" => mixed, "threats" => threats, "empty" => Array.Empty<FindingItem>(), _ => info }) _items.Add(f);
+        foreach (var f in scenario switch { "mixed" => mixed, "threats" => threats, "phone" => phone, "empty" => Array.Empty<FindingItem>(), _ => info }) _items.Add(f);
         UpdateHeadline(null);
         StatusText.Text = "Last full scan: today 9:41 PM  ·  7,787 files  ·  " + _items.Count + " items";
         ProtectionText.Text = "Protection data updated today";
@@ -506,6 +514,150 @@ public partial class MainWindow : Window
         enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
         using var fs = System.IO.File.Create(path);
         enc.Save(fs);
+    }
+
+    /// <summary>
+    /// Checks an Android phone or tablet plugged in by USB. Every step asks first: the Google download (with its
+    /// licence), which device, and the check itself. Only a device that already approved this PC can be chosen.
+    /// </summary>
+    private async void CheckPhone_Click(object sender, RoutedEventArgs e)
+    {
+        if (_working) return;
+        try
+        {
+            var status = await _engine.GetPhoneStatusAsync();
+            if (!status.ToolsReady)
+            {
+                var terms = "https://developer.android.com/studio/terms";
+                while (true)
+                {
+                    var answer = MessageBox.Show(this,
+                        "To check an Android phone, pc-guardian needs two things:\n\n" +
+                        "• Google's Android tools (adb, about 8 MB). pc-guardian checks the download against a pinned hash and Google's signature before using it.\n" +
+                        "• A public list of known spy apps (about 100 KB).\n\n" +
+                        "Google's tools are covered by the Android SDK License:\n" + terms + "\n\n" +
+                        "Yes = I accept the terms, download now\nNo = open the terms in my browser first\nCancel = stop",
+                        "Android phone check", MessageBoxButton.YesNoCancel, MessageBoxImage.Question, MessageBoxResult.Cancel);
+                    if (answer == MessageBoxResult.No) { AppInfo.OpenLink(terms); continue; }
+                    if (answer != MessageBoxResult.Yes) return;
+                    break;
+                }
+                if (!await RunPhoneToolsDownloadAsync()) return;
+                status = await _engine.GetPhoneStatusAsync();
+            }
+
+            var ready = status.Devices.Where(d => d.Ready).ToList();
+            if (ready.Count == 0)
+            {
+                var waiting = status.Devices.Count > 0
+                    ? "A device is connected but has not approved this PC yet (or is asleep). Unlock it and tap Allow on the \"Allow USB debugging?\" prompt, then try again."
+                    : "No Android device was found.";
+                MessageBox.Show(this,
+                    waiting + "\n\nTo get a phone ready:\n" +
+                    "1. Settings > About phone > tap Build number 7 times to turn on Developer options.\n" +
+                    "2. Settings > Developer options > turn on USB debugging.\n" +
+                    "3. Plug the phone in with a USB cable and unlock it.\n" +
+                    "4. Tap Allow on the \"Allow USB debugging?\" prompt.\n\n" +
+                    "You can turn USB debugging off again afterwards.",
+                    "No phone ready", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var chosen = ready.Count == 1 ? ready[0] : PickPhone(ready);
+            if (chosen == null) return;
+            var go = MessageBox.Show(this,
+                $"Check {chosen.Label}?\n\nThis reads only settings and app names: no messages, photos or files, and nothing is changed or uploaded. " +
+                "Your phone may show a small \"USB debugging connected\" notification.\n\nA clean result is not proof that a phone is safe.",
+                "Check this phone", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+            if (go != MessageBoxResult.Yes) return;
+            await RunPhoneCheckAsync(chosen);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Android phone check", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    /// <summary>A small list dialog for choosing between several ready devices.</summary>
+    private PhoneDevice? PickPhone(List<PhoneDevice> devices)
+    {
+        var list = new ListBox { ItemsSource = devices, DisplayMemberPath = "Label", SelectedIndex = 0, Margin = new Thickness(0, 0, 0, 12), MinHeight = 90 };
+        PhoneDevice? result = null;
+        var ok = new Button { Content = "Check this one", IsDefault = true, Padding = new Thickness(14, 5, 14, 5), Margin = new Thickness(0, 0, 8, 0) };
+        var cancel = new Button { Content = "Cancel", IsCancel = true, Padding = new Thickness(14, 5, 14, 5) };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        buttons.Children.Add(ok); buttons.Children.Add(cancel);
+        var panel = new StackPanel { Margin = new Thickness(18) };
+        panel.Children.Add(new TextBlock { Text = "More than one device is ready. Which one should pc-guardian check?", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
+        panel.Children.Add(list); panel.Children.Add(buttons);
+        var win = new Window { Title = "Choose a device", Content = panel, Owner = this, Width = 400, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+        win.SetResourceReference(BackgroundProperty, "WindowBg");
+        ok.Click += (_, _) => { result = list.SelectedItem as PhoneDevice; win.DialogResult = true; };
+        return win.ShowDialog() == true ? result : null;
+    }
+
+    private async Task<bool> RunPhoneToolsDownloadAsync()
+    {
+        _cts = new CancellationTokenSource();
+        _fileCount = 0;
+        SetWorking(true);
+        StepText.Text = "Getting the phone tools ready...";
+        CurrentText.Text = "";
+        Bar.Value = 0;
+        Headline.Text = "Downloading the phone tools";
+        Subline.Text = "Google's adb and the public spy-app list, checked against pinned hashes and Google's signature.";
+        SetTone("Accent");
+        var ok = false;
+        try
+        {
+            await _engine.InstallPhoneToolsAsync(new Progress<ProgressEvent>(OnProgress), _cts.Token);
+            Bar.Value = 1;
+            ShowResultCard("Phone tools are ready", "adb and the spy-app list are downloaded and verified.", "Good");
+            ok = true;
+        }
+        catch (OperationCanceledException) { Headline.Text = "Download cancelled"; Subline.Text = "Nothing was changed."; SetTone("Warn"); }
+        catch (Exception ex) { Headline.Text = "The download did not finish"; Subline.Text = ex.Message; SetTone("Bad"); }
+        finally { SetWorking(false); _cts.Dispose(); _cts = null; }
+        return ok;
+    }
+
+    private async Task RunPhoneCheckAsync(PhoneDevice device)
+    {
+        _cts = new CancellationTokenSource();
+        _fileCount = 0;
+        SetWorking(true);
+        _items.Clear();
+        StepText.Text = "Checking " + device.Label + "...";
+        CurrentText.Text = "Reading settings and app names (no messages, photos or files)";
+        Bar.Value = 0.5;
+        Headline.Text = "Checking your phone";
+        Subline.Text = "This takes a few seconds. Keep the phone unlocked and plugged in.";
+        SetTone("Accent");
+        try
+        {
+            var result = await _engine.CheckPhoneAsync(device.Serial);
+            foreach (var f in result.Items.OrderByDescending(i => i.IsAlert)) _items.Add(f);
+            UpdateHeadline($"{device.Label}: {result.Packages} apps checked.");
+            var alerts = result.Items.Count(i => i.IsAlert);
+            var info = result.Device.Model + (result.Device.Android != null ? $", Android {result.Device.Android}" : "") +
+                       (result.Device.SecurityPatch != null ? $", security update {result.Device.SecurityPatch}" : "");
+            StatusText.Text = $"Phone check: {device.Label} · {result.Packages} apps";
+            ShowResultCard(
+                alerts > 0 ? "Phone check complete: something needs attention"
+                : result.Items.Count > 0 ? "Phone check complete: no spy apps found, a few items to review"
+                : "Phone check complete: nothing found",
+                $"{info}  ·  {result.Packages} apps checked  ·  {result.Items.Count} item{(result.Items.Count == 1 ? "" : "s")} to review  ·  read-only, nothing was changed",
+                alerts > 0 ? "Bad" : result.Items.Count > 0 ? "Warn" : "Good");
+            FlashIfInactive();
+        }
+        catch (Exception ex)
+        {
+            Headline.Text = "The phone check did not finish";
+            Subline.Text = ex.Message;
+            SetTone("Bad");
+            StatusText.Text = "Phone check failed";
+        }
+        finally { SetWorking(false); _cts.Dispose(); _cts = null; }
     }
 
     /// <summary>Lets the person pick a folder or drive and scans every file in it.</summary>

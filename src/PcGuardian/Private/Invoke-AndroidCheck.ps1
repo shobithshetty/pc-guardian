@@ -48,6 +48,24 @@ function Get-AndroidDevice {
     }
 }
 
+function Get-AndroidDeviceSettled {
+    <#
+    .SYNOPSIS
+        Like Get-AndroidDevice, but waits for a freshly started adb server to finish finding devices.
+    .DESCRIPTION
+        Right after adb starts, the first listing can be missing a device or show it "offline" for a moment.
+        If nothing is listed, or something is offline, it waits two seconds and lists again (up to twice).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Adb, [int]$WaitMilliseconds = 2000)
+    $devices = @(Get-AndroidDevice -Adb $Adb)
+    for ($i = 0; $i -lt 2 -and (($devices.Count -eq 0) -or @($devices | Where-Object State -eq 'offline').Count -gt 0); $i++) {
+        Start-Sleep -Milliseconds $WaitMilliseconds
+        $devices = @(Get-AndroidDevice -Adb $Adb)
+    }
+    $devices
+}
+
 function Test-AndroidReadOnlyCommand {
     <#
     .SYNOPSIS

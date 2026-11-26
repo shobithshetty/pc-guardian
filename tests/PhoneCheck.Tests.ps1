@@ -2,6 +2,32 @@ BeforeAll {
     Import-Module (Join-Path $PSScriptRoot '..\src\PcGuardian\PcGuardian.psd1') -Force
 }
 
+Describe 'phone tools download' {
+    It 'pins adb to an exact version, hashes and signer' {
+        $p = Get-Content (Join-Path $PSScriptRoot '..\src\PcGuardian\data\pins.json') -Raw | ConvertFrom-Json
+        $p.adb.sha256 | Should -Match '^[0-9a-f]{64}$'
+        $p.adb.sha1   | Should -Match '^[0-9a-f]{40}$'
+        $p.adb.url    | Should -Match '^https://dl\.google\.com/android/repository/platform-tools_r[\d.]+-win\.zip$'
+        $p.adb.signer | Should -Be 'Google LLC'
+        $p.phoneLists.stalkerwareUrl | Should -Match '^https://raw\.githubusercontent\.com/AssoEchap/stalkerware-indicators/'
+    }
+    It 'refuses to download anything until the Android SDK License is accepted' {
+        $d = Join-Path ([IO.Path]::GetTempPath()) ('pcg-phone-' + [guid]::NewGuid())
+        { Install-GuardianPhoneTools -DataPath $d } | Should -Throw '*Android SDK License*'
+        Test-Path $d | Should -BeFalse
+    }
+    It 'reports not ready and no devices when nothing is downloaded' {
+        $d = Join-Path ([IO.Path]::GetTempPath()) ('pcg-phone-' + [guid]::NewGuid())
+        $s = Get-GuardianPhoneStatus -DataPath $d
+        $s.ToolsReady | Should -BeFalse
+        @($s.Devices).Count | Should -Be 0
+    }
+    It 'refuses to check a phone before the tools exist' {
+        $d = Join-Path ([IO.Path]::GetTempPath()) ('pcg-phone-' + [guid]::NewGuid())
+        { Invoke-GuardianPhoneCheck -Serial 'X' -DataPath $d } | Should -Throw '*not downloaded*'
+    }
+}
+
 Describe 'ConvertFrom-StalkerwareList' {
     BeforeAll {
         $script:yaml = @'

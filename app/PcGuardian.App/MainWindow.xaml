@@ -16,6 +16,8 @@
                       ToolTip="Checks every file in the folder or drive you choose. Slower than a full scan."/>
             <MenuItem Header="Scan _all drives (slow)..." Click="ScanAllDrives_Click"
                       ToolTip="Checks every file on every fixed drive. It can take hours."/>
+            <MenuItem Header="Check an Android _phone (USB)..." Click="CheckPhone_Click"
+                      ToolTip="Looks for spy apps and risky settings on an Android phone or tablet you plug in. Reads only settings and app names."/>
             <MenuItem Header="Scan before Windows _starts (Defender Offline)..." Click="OfflineScan_Click"
                       ToolTip="Finds rootkits that hide while Windows is running. Opens Windows Security; your PC restarts."/>
             <Separator/>

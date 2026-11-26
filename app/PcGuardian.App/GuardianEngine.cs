@@ -227,6 +227,46 @@ public sealed class GuardianEngine
         if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? $"Setup exited with code {code}.");
     }
 
+    // ---- Phone check --------------------------------------------------------------------------------------
+
+    public async Task<PhoneStatus> GetPhoneStatusAsync(CancellationToken ct = default)
+    {
+        var (code, stdout, stderr) = await PowerShellAsync(
+            Prelude + "Get-GuardianPhoneStatus | ConvertTo-Json -Depth 4 -Compress", null, null, ct);
+        if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? "Could not look for phones.");
+        return JsonSerializer.Deserialize<PhoneStatus>(stdout.Trim(), Json) ?? new PhoneStatus();
+    }
+
+    /// <summary>
+    /// Downloads Google's adb and the stalkerware lists. Call it only after the person accepted the Android SDK License:
+    /// the engine refuses without -AcceptAndroidSdkLicense.
+    /// </summary>
+    public async Task InstallPhoneToolsAsync(IProgress<ProgressEvent> progress, CancellationToken ct = default)
+    {
+        var lines = new Progress<string>(line =>
+        {
+            if (line.StartsWith(ProgressPrefix, StringComparison.Ordinal))
+            {
+                var parts = line.Split('|', 3);
+                if (parts.Length == 3) progress.Report(new ProgressEvent(parts[1], parts[2]));
+            }
+            else if (!string.IsNullOrWhiteSpace(line)) progress.Report(new ProgressEvent("file", line.Trim()));
+        });
+        var (code, _, stderr) = await PowerShellAsync(
+            Prelude + "Install-GuardianPhoneTools -AcceptAndroidSdkLicense -Progress", null, lines, ct);
+        if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? $"The download exited with code {code}.");
+    }
+
+    /// <summary>Checks exactly one device. The serial travels in an environment variable, never on the command line.</summary>
+    public async Task<PhoneResult> CheckPhoneAsync(string serial, CancellationToken ct = default)
+    {
+        var (code, stdout, stderr) = await PowerShellAsync(
+            Prelude + "Invoke-GuardianPhoneCheck -Serial $env:PCG_SERIAL | ConvertTo-Json -Depth 6 -Compress",
+            new Dictionary<string, string> { ["PCG_SERIAL"] = serial }, null, ct);
+        if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? "The phone check failed.");
+        return JsonSerializer.Deserialize<PhoneResult>(stdout.Trim(), Json) ?? throw new InvalidOperationException("The phone check returned no result.");
+    }
+
     private static string? FirstLine(string text) =>
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
 
