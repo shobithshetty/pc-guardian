@@ -105,6 +105,10 @@ Describe 'ConvertFrom-HayabusaTimeline' {
     It 'returns nothing for an empty timeline' {
         @(InModuleScope PcGuardian { ConvertFrom-HayabusaTimeline -Line @() }).Count | Should -Be 0
     }
+    It 'accepts $null, which a scan with no detections passed (it used to crash the whole scan)' {
+        @(InModuleScope PcGuardian { ConvertFrom-HayabusaTimeline -Line $null }).Count | Should -Be 0
+        @(InModuleScope PcGuardian { Invoke-EventLogScan -TimelineLine $null }).Count | Should -Be 0
+    }
 }
 
 Describe 'trusted certificate check' {

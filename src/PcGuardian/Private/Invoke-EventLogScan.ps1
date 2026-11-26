@@ -6,9 +6,9 @@ function ConvertFrom-HayabusaTimeline {
         Many log events usually match the same rule, so they are grouped: "rule name, how many times, most recent".
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)][AllowEmptyCollection()][AllowEmptyString()][string[]]$Line)
+    param([Parameter(Mandatory)][AllowNull()][AllowEmptyCollection()][AllowEmptyString()][string[]]$Line)
 
-    $rows = foreach ($l in $Line) {
+    $rows = foreach ($l in @($Line)) {
         if (-not $l -or -not $l.TrimStart().StartsWith('{')) { continue }
         try { $l | ConvertFrom-Json -ErrorAction Stop } catch { }
     }
@@ -49,7 +49,8 @@ function Invoke-EventLogScan {
         try {
             Write-GuardianProgress -Type file -Value 'Reading the last 30 days of Windows event logs'
             & $d.Hayabusa dfir-timeline -l -w -q -N -K -Q -C -m high --time-offset 30d -t jsonl -o $outFile 2>&1 | Out-Null
-            $TimelineLine = if (Test-Path $outFile) { @(Get-Content -Path $outFile) } else { @() }
+            # No detections means no file or an empty one; an `if` that yields @() would give $null, so wrap it.
+            $TimelineLine = @(if (Test-Path $outFile) { Get-Content -Path $outFile })
         }
         finally { Pop-Location; Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue }
     }
