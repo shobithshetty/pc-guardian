@@ -48,6 +48,27 @@ supply-chain attacks and writes a short report saying whether pc-guardian should
 pages are untrusted text: the task is told to treat them as data, never to run anything it reads, and never to edit
 the project. Any detection idea it proposes goes through the normal review, testing and pinning steps.
 
+## Download safety rules
+
+Every download, by the app or by a maintainer testing a new tool, follows these rules:
+
+1. **Only from the original source.** The project's own GitHub release or the vendor (for example Google for `adb`).
+   Never from an aggregator that re-packages someone else's tool or lists.
+2. **Hash first.** The file's SHA-256 must match the value pinned in `pins.json`. For a new tool the maintainer checks it
+   against the vendor's published digest or checksum before pinning (Google publishes SHA-1 only; the SHA-256 is computed
+   once and pinned).
+3. **Signature where there is one.** A program signed by its vendor must show a valid Authenticode signature from that
+   vendor before it runs (`adb.exe`: Google LLC). Unsigned open-source tools rely on rule 2.
+4. **Own folder, never your own data.** Each download is extracted into a new folder of its own and is not run from there
+   until it passes these checks.
+5. **Scan it with our own scanners.** A new program or archive is scanned with ClamAV and YARA first. Detection-rule files,
+   sample attack logs and similar test data do match (they describe malware); a program or archive that matches is a stop.
+6. **Run with the least rights and read-only options.** No administrator rights unless a feature needs them, and with the
+   options that write, kill or change nothing.
+7. **Data is not code.** Lists such as LOLDrivers and the stalkerware indicators are only compared with local facts. They are
+   size-capped and shape-checked, never run, and fetched from their original repository (no copy is shipped).
+8. **A person approves each new download.** Nothing new is fetched without the owner's go-ahead.
+
 ## What this does not protect against
 
 - A rule set or program that was already malicious at the commit that was pinned.
