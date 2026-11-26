@@ -27,8 +27,13 @@ public sealed class FindingItem
 
     public bool CanIgnoreFile => FilePath.Length > 0;
 
+    /// <summary>Which phone or tablet a row came from, so PC and phone results are never mixed up. Empty for PC rows.</summary>
+    public string Device { get; set; } = "";
+
     /// <summary>A readable title for the row. The raw Key stays as the identity used by the safe list.</summary>
-    public string Title
+    public string Title => Device.Length > 0 ? $"{TitleCore}  ·  {Device}" : TitleCore;
+
+    private string TitleCore
     {
         get
         {

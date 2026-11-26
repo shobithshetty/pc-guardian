@@ -262,6 +262,7 @@ public partial class MainWindow : Window
         _cts = new CancellationTokenSource();
         _fileCount = 0;
         SetWorking(true);
+        ScanButton.Content = "Scan now";
         _maxFiles = 0;
         StepText.Text = deep ? "Starting a full scan..." : "Checking for changes...";
         CurrentText.Text = "";
@@ -490,13 +491,23 @@ public partial class MainWindow : Window
             F("Info", "Phone", "Phone:Sideloaded:app.meridian.focusclock.preview", "Installed from outside the app stores (installer: null). Fine if you installed it yourself from a file; worth a look if not."),
             F("Info", "Phone", "Phone:SecurityPatch", "The last Android security update is dated 2024-06-01 (30 months ago). Old phones miss fixes for flaws that spyware uses."),
         };
+        var tablet = new[]
+        {
+            F("Alert", "Phone", "Phone:WirelessDebugging", "Wireless debugging is on: a computer on the same Wi-Fi that was paired once can control this phone. Turn it off in Developer options when you are not using it."),
+            F("Info", "Phone", "Phone:Sideloaded:app.meridian.focusclock", "Installed from outside the app stores (installer: null). Fine if you installed it yourself from a file; worth a look if not."),
+            F("Info", "Phone", "Phone:Accessibility:com.x8bit.bitwarden", "Is an accessibility service: it can read the screen and what is typed. Normal for screen readers and password managers; a common stalkerware trick otherwise."),
+            F("Info", "Phone", "Phone:Accessibility:com.teslacoilsw.launcher", "Is an accessibility service: it can read the screen and what is typed. Normal for screen readers and password managers; a common stalkerware trick otherwise."),
+            F("Info", "Phone", "Phone:Accessibility:eu.darken.sdmse", "Is an accessibility service: it can read the screen and what is typed. Normal for screen readers and password managers; a common stalkerware trick otherwise."),
+            F("Info", "Phone", "Phone:SecurityPatch", "The last Android security update is dated 2024-06-01 (30 months ago). Old phones miss fixes for flaws that spyware uses."),
+        };
         var threats = new[]
         {
             F("Alert", "Malware", @"Malware:C:\Users\me\Downloads\invoice.exe", "ClamAV detected Win.Trojan.Agent-123"),
             F("Alert", "Malware", @"Malware:YARA:C:\Users\me\AppData\Local\Temp\x.dll", "YARA rule APT_Sample (author: someone) matched; public rules can false-positive, review the file"),
         };
         _items.Clear();
-        foreach (var f in scenario switch { "mixed" => mixed, "threats" => threats, "phone" => phone, "empty" => Array.Empty<FindingItem>(), _ => info }) _items.Add(f);
+        if (scenario is "tablet" or "phone") { foreach (var f in scenario == "tablet" ? tablet : phone) f.Device = "Samsung SM-T505"; ScanButton.Content = "Scan this PC"; }
+        foreach (var f in scenario switch { "mixed" => mixed, "threats" => threats, "phone" => phone, "tablet" => tablet, "empty" => Array.Empty<FindingItem>(), _ => info }) _items.Add(f);
         UpdateHeadline(null);
         StatusText.Text = "Last full scan: today 9:41 PM  ·  7,787 files  ·  " + _items.Count + " items";
         ProtectionText.Text = "Protection data updated today";
@@ -627,6 +638,7 @@ public partial class MainWindow : Window
         _fileCount = 0;
         SetWorking(true);
         _items.Clear();
+        ScanButton.Content = "Scan now";
         StepText.Text = "Checking " + device.Label + "...";
         CurrentText.Text = "Reading settings and app names (no messages, photos or files)";
         Bar.Value = 0.5;
@@ -636,8 +648,9 @@ public partial class MainWindow : Window
         try
         {
             var result = await _engine.CheckPhoneAsync(device.Serial);
-            foreach (var f in result.Items.OrderByDescending(i => i.IsAlert)) _items.Add(f);
+            foreach (var f in result.Items.OrderByDescending(i => i.IsAlert)) { f.Device = device.Label; _items.Add(f); }
             UpdateHeadline($"{device.Label}: {result.Packages} apps checked.");
+            ScanButton.Content = "Scan this PC";   // the headline button scans the PC, not the phone
             var alerts = result.Items.Count(i => i.IsAlert);
             var info = result.Device.Model + (result.Device.Android != null ? $", Android {result.Device.Android}" : "") +
                        (result.Device.SecurityPatch != null ? $", security update {result.Device.SecurityPatch}" : "");
