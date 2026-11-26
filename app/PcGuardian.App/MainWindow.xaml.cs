@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     {
         _engine = engine;
         InitializeComponent();
+        Title = $"pc-guardian {AppInfo.Version}";
         ResultsList.ItemsSource = _items;
         _items.CollectionChanged += (_, _) => UpdateMarkAll();
         _clock.Tick += (_, _) => UpdateStats();
