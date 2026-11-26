@@ -58,6 +58,7 @@ public partial class SettingsWindow : Window
             var daily = await _engine.GetDailyScanAsync();
             var safe = await _engine.GetSafeItemsAsync();
 
+            QuickStartCheck.IsChecked = AppPrefs.Load().QuickCheckOnStart;
             OsvCheck.IsChecked = settings.Osv;
             KevCheck.IsChecked = settings.KnownExploited;
             UpdateCheck.IsChecked = settings.UpdateCheck;
@@ -82,6 +83,15 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex) { Notice.Text = ex.Message; }
         finally { _loading = false; }
+    }
+
+    private void QuickStartCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        var prefs = AppPrefs.Load();
+        prefs.QuickCheckOnStart = QuickStartCheck.IsChecked == true;
+        prefs.Save();
+        Notice.Text = "Saved. It applies the next time pc-guardian opens.";
     }
 
     private async void VtCheck_Changed(object sender, RoutedEventArgs e)

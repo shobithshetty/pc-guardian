@@ -17,8 +17,19 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="24,20,24,0">
 
-                <!-- Daily scan -->
+                <!-- When the window opens -->
                 <Border Style="{StaticResource Card}" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="When pc-guardian opens" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Margin="0,4,0,12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"
+                                   Text="The quick check takes a few seconds. It looks at startup items, scheduled tasks, open ports, certificates and Windows settings. It does not scan your files; the Scan now button does that."/>
+                        <CheckBox x:Name="QuickStartCheck" Content="Run a quick check when pc-guardian opens"
+                                  Checked="QuickStartCheck_Changed" Unchecked="QuickStartCheck_Changed"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Daily scan -->
+                <Border Style="{StaticResource Card}" Padding="20" Margin="0,12,0,0">
                     <StackPanel>
                         <TextBlock Text="Daily scan" FontSize="16" FontWeight="SemiBold"/>
                         <TextBlock Margin="0,4,0,12" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"

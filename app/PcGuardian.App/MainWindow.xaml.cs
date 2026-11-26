@@ -47,7 +47,13 @@ public partial class MainWindow : Window
             // The installer's "set up virus scanning" box leaves a flag: the person already agreed, so start now.
             if (_scanner is { Ready: false } && ConsumeAutoSetupFlag())
                 await RunSetupAsync(installClamAv: !_scanner.ClamAvInstalled, clamAvOnly: false);
-            await RunScanAsync(deep: false);
+            if (AppPrefs.Load().QuickCheckOnStart) await RunScanAsync(deep: false);
+            else
+            {
+                Headline.Text = "Ready";
+                Subline.Text = "Press Scan now for a full scan, or use File > Quick check. You can turn the automatic quick check back on in Settings.";
+                SetTone("Accent");
+            }
             await CheckForUpdateAsync();
         };
     }
