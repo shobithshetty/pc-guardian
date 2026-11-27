@@ -81,7 +81,7 @@ Filename: "powershell.exe"; \
 ; see the environment change it just made).
 Filename: "cmd.exe"; \
   Parameters: "/c set ""PCGUARDIAN_DATA={code:GetDataDir}"" && start """" ""{app}\PcGuardian.exe"""; \
-  Description: "Open pc-guardian"; Flags: runhidden nowait postinstall skipifsilent
+  Description: "Open pc-guardian"; Flags: runhidden nowait postinstall
 
 [UninstallRun]
 Filename: "powershell.exe"; \
@@ -91,6 +91,16 @@ Filename: "powershell.exe"; \
 [Code]
 var
   DataDirPage: TInputDirWizardPage;
+
+// The data folder chosen by an earlier install, if any: the user environment variable it left, or the running one.
+function ExistingDataDir(): String;
+begin
+  Result := '';
+  if not RegQueryStringValue(HKCU, 'Environment', 'PCGUARDIAN_DATA', Result) then
+    Result := '';
+  if Result = '' then
+    Result := GetEnv('PCGUARDIAN_DATA');
+end;
 
 // A page that asks where pc-guardian should keep its data. The default is the standard Windows location.
 procedure InitializeWizard();
@@ -105,6 +115,10 @@ begin
 #else
   DataDirPage.Values[0] := ExpandConstant('{localappdata}\PcGuardian');
 #endif
+  // An update (run silently by the app's "Update now") shows no pages, so it must start from the folder the person
+  // chose earlier. Otherwise it would reset PCGUARDIAN_DATA and the app would stop seeing its data.
+  if ExistingDataDir() <> '' then
+    DataDirPage.Values[0] := ExistingDataDir();
 end;
 
 function GetDataDir(Param: String): String;

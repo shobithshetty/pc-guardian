@@ -100,6 +100,7 @@ public partial class MainWindow : Window
     private void ShowResultCard(string title, string detail, string tone, string? actionText = null, string? actionUrl = null)
     {
         _resultActionUrl = actionUrl;
+        _updateOffer = null;   // only the update notice sets this, right after showing its card
         ResultAction.Content = actionText;
         ResultAction.Visibility = actionText != null && actionUrl != null ? Visibility.Visible : Visibility.Collapsed;
         ResultTitle.Text = title;
@@ -112,12 +113,65 @@ public partial class MainWindow : Window
 
     private void DismissResult_Click(object sender, RoutedEventArgs e) => ResultCard.Visibility = Visibility.Collapsed;
 
-    private void ResultAction_Click(object sender, RoutedEventArgs e)
+    private async void ResultAction_Click(object sender, RoutedEventArgs e)
     {
+        if (_updateOffer != null) { await InstallUpdateAsync(_updateOffer); return; }
         if (_resultActionUrl != null) AppInfo.OpenLink(_resultActionUrl);   // https only; anything else is refused
     }
 
-    /// <summary>Only when the person turned it on in Settings and the project has a GitHub address. Never installs anything.</summary>
+    private UpdateInfo? _updateOffer;
+
+    /// <summary>
+    /// One-click update. The person confirms first; then the installer is downloaded from this project's GitHub release,
+    /// its SHA-256 is checked against the release's list (a mismatch deletes it), and only then is it run. Windows asks
+    /// for permission, pc-guardian closes so its files can be replaced, and the installer reopens it.
+    /// </summary>
+    private async Task InstallUpdateAsync(UpdateInfo info)
+    {
+        var ask = MessageBox.Show(this,
+            $"Update pc-guardian from {AppInfo.Version} to {info.Latest}?\n\n" +
+            "pc-guardian will download the installer from this project's GitHub release, check its checksum against the release's list, " +
+            "then close, install the update and reopen. Windows will ask for permission. Your settings and safe list are kept.\n\n" +
+            "The installer is not code-signed yet, so Windows may show an \"unknown publisher\" warning.",
+            "Update pc-guardian", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.Yes);
+        if (ask != MessageBoxResult.Yes) return;
+
+        ResultAction.IsEnabled = false;
+        ResultTitle.Text = "Downloading the update...";
+        ResultDetail.Text = "Then its checksum is checked. Nothing is installed until that matches.";
+        try
+        {
+            var dl = await _engine.SaveUpdateAsync(AppInfo.RepoSlug, info);
+            // A signature that is present but broken is worse than none: refuse it.
+            if (dl.Signature is "HashMismatch" or "NotTrusted" or "UnknownError")
+            {
+                try { System.IO.File.Delete(dl.Path); } catch { }
+                throw new InvalidOperationException($"The installer's signature is not valid ({dl.Signature}), so it was deleted and nothing was installed.");
+            }
+            ResultTitle.Text = "Update verified";
+            ResultDetail.Text = $"Checksum matches ({dl.Sha256[..16]}...). Windows will ask for permission, then pc-guardian closes and reopens when the update is done.";
+            var psi = new ProcessStartInfo(dl.Path, "/SILENT /SP- /CLOSEAPPLICATIONS")
+            {
+                UseShellExecute = true, Verb = "runas",
+            };
+            try { Process.Start(psi); }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            {
+                ShowResultCard($"pc-guardian {info.Latest} is available", "The permission prompt was cancelled, so nothing was installed. Press Update now to try again.", "Accent", "Update now", info.Url);
+                _updateOffer = info;
+                return;
+            }
+            Application.Current.Shutdown();   // the installer replaces our files, then reopens the app
+        }
+        catch (Exception ex)
+        {
+            ShowResultCard("The update was not installed", ex.Message, "Bad", "Update now", info.Url);
+            _updateOffer = info;
+        }
+        finally { ResultAction.IsEnabled = true; }
+    }
+
+    /// <summary>Only when the update check is on in Settings and the project has a GitHub address. It only offers; nothing installs until the person presses Update now.</summary>
     private async Task CheckForUpdateAsync()
     {
         if (AppInfo.RepoSlug.Length == 0) return;
@@ -127,9 +181,14 @@ public partial class MainWindow : Window
             if (!settings.UpdateCheck) return;
             var info = await _engine.GetUpdateInfoAsync(AppInfo.RepoSlug, AppInfo.Version);
             if (info is { Available: true, Url: not null })
+            {
+                var oneClick = info.InstallerUrl != null && info.ChecksumsUrl != null;
                 ShowResultCard($"pc-guardian {info.Latest} is available",
-                    $"You have {AppInfo.Version}. Nothing is installed automatically: open the download page, check the checksum, then run the new installer.",
-                    "Accent", "Open download page", info.Url);
+                    oneClick ? $"You have {AppInfo.Version}. Press Update now: it downloads the installer, checks its checksum, then installs. Nothing happens until you press it."
+                             : $"You have {AppInfo.Version}. Open the download page, check the checksum, then run the new installer.",
+                    "Accent", oneClick ? "Update now" : "Open download page", info.Url);
+                if (oneClick) _updateOffer = info;
+            }
         }
         catch { /* an update notice is a convenience; never bother the person with its errors */ }
     }
@@ -548,6 +607,7 @@ public partial class MainWindow : Window
         // "saved" uses the real last-scan.json (point PCGUARDIAN_DATA at a copy) and the same restore code as the app.
         if (scenario == "saved") foreach (var f in LastScan.Restorable(Array.Empty<string>())) _items.Add(f);
         UpdateHeadline(null);
+        if (scenario == "update") ShowResultCard("pc-guardian 0.2.0 is available", $"You have {AppInfo.Version}. Press Update now: it downloads the installer, checks its checksum, then installs. Nothing happens until you press it.", "Accent", "Update now", "https://github.com/o/r");
         StatusText.Text = scenario == "saved" ? LastScan.Load()?.Describe() ?? "no saved scan"
             : "Last full scan: today 9:41 PM  ·  7,787 files  ·  " + _items.Count + " items";
         ProtectionText.Text = "Protection data updated today";

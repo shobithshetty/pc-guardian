@@ -120,6 +120,19 @@ public sealed class GuardianEngine
         return JsonSerializer.Deserialize<UpdateInfo>(stdout.Trim(), Json) ?? new UpdateInfo();
     }
 
+    /// <summary>Downloads the release installer and checks its SHA-256 against the release's list. Installs nothing.</summary>
+    public async Task<DownloadedUpdate> SaveUpdateAsync(string repository, UpdateInfo info, CancellationToken ct = default)
+    {
+        var env = new Dictionary<string, string>
+        {
+            ["PCG_REPO"] = repository, ["PCG_SETUP"] = info.InstallerUrl ?? "", ["PCG_SUMS"] = info.ChecksumsUrl ?? "",
+        };
+        var (code, stdout, stderr) = await PowerShellAsync(
+            Prelude + "Save-GuardianUpdate -Repository $env:PCG_REPO -InstallerUrl $env:PCG_SETUP -ChecksumsUrl $env:PCG_SUMS | ConvertTo-Json -Compress", env, null, ct);
+        if (code != 0) throw new InvalidOperationException(FirstLine(stderr) ?? "Could not download the update.");
+        return JsonSerializer.Deserialize<DownloadedUpdate>(stdout.Trim(), Json) ?? throw new InvalidOperationException("The update download returned nothing.");
+    }
+
     public Task SetOsvEnabledAsync(bool enabled, CancellationToken ct = default) =>
         RunVoidAsync("Set-GuardianSetting -Name osv -Value ([bool]::Parse($env:PCG_VALUE))",
             new() { ["PCG_VALUE"] = enabled ? "true" : "false" }, ct);

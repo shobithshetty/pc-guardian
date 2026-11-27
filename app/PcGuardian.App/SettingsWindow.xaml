@@ -94,7 +94,7 @@
                         <CheckBox x:Name="UpdateCheck" Content="Tell me when a new version of pc-guardian is available"
                                   Checked="UpdateCheck_Changed" Unchecked="UpdateCheck_Changed"/>
                         <TextBlock x:Name="UpdateCheckNote" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" FontSize="12"
-                                   Text="Checks GitHub at most once a day and shows a notice. It never downloads or installs the update for you."/>
+                                   Text="Checks GitHub at most once a day, when pc-guardian opens, and shows a notice. Nothing is downloaded or installed unless you press Update now."/>
                     </StackPanel>
                 </Border>
 

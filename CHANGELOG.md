@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **One-click updates.** When a newer release exists on GitHub, the app shows "pc-guardian X is available" with an
+  **Update now** button. After the person confirms, it downloads the installer from that release (only
+  `github.com/<owner>/<name>/releases/download/...` is accepted), checks its SHA-256 against the release's
+  `SHA256SUMS.txt` (a mismatch deletes the file), then runs it. Windows asks for permission, the app closes so its files
+  can be replaced, and the installer reopens it. Settings and the safe list are kept, and the installer now keeps a
+  custom data folder when run silently. The update check is on by default (it contacts GitHub at most once a day, when
+  the app opens; Settings can turn it off). Engine: `Save-GuardianUpdate`; `Get-GuardianUpdateInfo` also returns the
+  release's installer and checksum links. Releases are unsigned until code signing is approved, so Windows may warn.
 - **pc-guardian is on-demand only.** The optional daily 2:00 AM scheduled scan is gone: no installer option, no Settings
   toggle, nothing scheduled. If an older version left that task on your PC, Settings shows "Daily scan from an earlier
   version" with a button to remove it, and the uninstaller removes it too. `installer/Install.ps1` became

@@ -385,6 +385,20 @@ public sealed class UpdateInfo
     public string? Current { get; set; }
     public string? Latest { get; set; }
     public string? Url { get; set; }
+    /// <summary>The release's installer and checksum list; both are set only for real downloads of this project's release.</summary>
+    public string? InstallerUrl { get; set; }
+    public string? ChecksumsUrl { get; set; }
+}
+
+/// <summary>Save-GuardianUpdate: an installer that was downloaded and checked against the release's checksum list.</summary>
+public sealed class DownloadedUpdate
+{
+    public string Path { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Sha256 { get; set; } = "";
+    public long Bytes { get; set; }
+    public string Signature { get; set; } = "";
+    public string Signer { get; set; } = "";
 }
 
 /// <summary>Get-GuardianDailyScan: the scheduled daily scan task.</summary>

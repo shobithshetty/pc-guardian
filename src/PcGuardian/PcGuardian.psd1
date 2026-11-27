@@ -5,7 +5,7 @@
     Author            = 'pc-guardian contributors'
     Description       = 'Read-only Windows security audit with baseline diffing. Orchestrates Microsoft Defender; not an antivirus engine.'
     PowerShellVersion = '5.1'
-    FunctionsToExport = @('Invoke-GuardianRun', 'Set-GuardianVirusTotalKey', 'Install-GuardianScanner', 'Get-GuardianSafeItem', 'Add-GuardianSafeItem', 'Remove-GuardianSafeItem', 'Get-GuardianScannerStatus', 'Get-GuardianSetting', 'Set-GuardianSetting', 'Get-GuardianDailyScan', 'Add-GuardianDevFolder', 'Remove-GuardianDevFolder', 'Get-GuardianUpdateInfo', 'Add-GuardianIgnoredFile', 'Get-GuardianIgnoredFile', 'Remove-GuardianIgnoredFile', 'Install-GuardianPhoneTools', 'Get-GuardianPhoneStatus', 'Invoke-GuardianPhoneCheck')
+    FunctionsToExport = @('Invoke-GuardianRun', 'Set-GuardianVirusTotalKey', 'Install-GuardianScanner', 'Get-GuardianSafeItem', 'Add-GuardianSafeItem', 'Remove-GuardianSafeItem', 'Get-GuardianScannerStatus', 'Get-GuardianSetting', 'Set-GuardianSetting', 'Get-GuardianDailyScan', 'Add-GuardianDevFolder', 'Remove-GuardianDevFolder', 'Get-GuardianUpdateInfo', 'Save-GuardianUpdate', 'Add-GuardianIgnoredFile', 'Get-GuardianIgnoredFile', 'Remove-GuardianIgnoredFile', 'Install-GuardianPhoneTools', 'Get-GuardianPhoneStatus', 'Invoke-GuardianPhoneCheck')
     CmdletsToExport   = @()
     VariablesToExport = @()
     AliasesToExport   = @()

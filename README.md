@@ -15,6 +15,14 @@ It **orchestrates** what Windows already provides (Microsoft Defender, winget, W
 3. **Update and scan** (v0.3): refresh Defender signatures and check for app updates.
 4. **On demand only**: pc-guardian never runs in the background. No tray icon, no service and no scheduled scans: you open it when you want a check, and it updates only when the project publishes a new release.
 
+## Updates
+
+When the project publishes a new release, pc-guardian tells you the next time you open it and offers **Update now**.
+It downloads the installer from that GitHub release, checks the SHA-256 against the release's `SHA256SUMS.txt`, then
+asks Windows for permission, installs and reopens. Nothing is installed until you press the button. The check sends
+only an ordinary request to GitHub (so GitHub sees your IP address), at most once a day, and can be turned off in
+Settings. Releases are not code-signed yet, so Windows may show an "unknown publisher" warning.
+
 ## Status
 
 Early development. v0.1 is a read-only audit with baseline comparison. Releases are unsigned until v1.0.

@@ -10,11 +10,11 @@ public static class AppInfo
         (Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.0")
         .Split('+')[0];
 
-    // Filled in when the project is published. Empty means "not published yet" and the links stay hidden.
+    // Filled in when the project is made public. Empty means "not published yet" and the links stay hidden.
     public const string ProjectUrl = "";
 
     /// <summary>GitHub "owner/name" used by the optional update notice. Empty until the project is published.</summary>
-    public const string RepoSlug = "";
+    public const string RepoSlug = "shobithshetty/pc-guardian";
     public const string SponsorUrl = "";
 
     public const string Credits =
