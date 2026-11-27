@@ -287,13 +287,19 @@ public partial class MainWindow : Window
             _items.Clear();
             foreach (var f in result.Items.OrderByDescending(i => i.IsMalware).ThenByDescending(i => i.IsAlert))
                 _items.Add(f);
+            // A quick check only reports changes, so bring back the last full scan's threats that are still on disk.
+            if (!deep && !custom)
+                foreach (var f in LastScan.Load()?.Found ?? new())
+                    if (_items.All(i => i.Key != f.Key) && (f.FilePath.Length == 0 || System.IO.File.Exists(f.FilePath)))
+                        _items.Insert(0, f);
             UpdateHeadline(result.FirstRun ? $"Baseline saved with {result.BaselineCount} items. Later checks show what changes." : null);
             var threats = result.Items.Count(i => i.IsMalware);
             var review = result.Items.Count - threats;
             if (deep)
             {
                 // Make the end of a full scan impossible to miss, and remember it for next time.
-                var last = new LastScan { Time = DateTime.Now, Files = _maxFiles, Seconds = (int)_elapsed.Elapsed.TotalSeconds, Threats = threats, Review = review };
+                var last = new LastScan { Time = DateTime.Now, Files = _maxFiles, Seconds = (int)_elapsed.Elapsed.TotalSeconds, Threats = threats, Review = review,
+                                       Found = result.Items.Where(i => i.IsMalware).ToList() };
                 // A folder or drive scan is its own thing: it must not replace the "last full scan" of the usual places.
                 if (!custom) last.Save();
                 StatusText.Text = custom ? $"Scanned {string.Join(", ", paths!)} · {_maxFiles:N0} files" : last.Describe();
@@ -738,6 +744,7 @@ public partial class MainWindow : Window
         {
             await _engine.IgnoreFileAsync(item.FilePath);
             _items.Remove(item);
+            LastScan.Forget(item.Key);
             UpdateHeadline(null);
             StatusText.Text = "Ignoring: " + item.FilePath;
         }

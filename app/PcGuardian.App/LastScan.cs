@@ -12,6 +12,18 @@ public sealed class LastScan
     public int Threats { get; set; }
     public int Review { get; set; }
 
+    /// <summary>The threats that scan found, so they can be listed again after a restart (a quick check only shows changes).</summary>
+    public List<FindingItem> Found { get; set; } = new();
+
+    /// <summary>Drops one saved threat (the person ignored that file) so it does not come back on the next start.</summary>
+    public static void Forget(string key)
+    {
+        var last = Load();
+        if (last is null || last.Found.RemoveAll(f => f.Key == key) == 0) return;
+        last.Threats = last.Found.Count;
+        last.Save();
+    }
+
     private static string FilePath => Path.Combine(AppPaths.DataDir, "last-scan.json");
 
     public static LastScan? Load()
