@@ -288,10 +288,14 @@ public partial class MainWindow : Window
             foreach (var f in result.Items.OrderByDescending(i => i.IsMalware).ThenByDescending(i => i.IsAlert))
                 _items.Add(f);
             // A quick check only reports changes, so bring back the last full scan's threats that are still on disk.
+            // Several rules can match one file, so a saved key may repeat: only skip keys this check itself reported.
             if (!deep && !custom)
-                foreach (var f in LastScan.Load()?.Found ?? new())
-                    if (_items.All(i => i.Key != f.Key) && (f.FilePath.Length == 0 || System.IO.File.Exists(f.FilePath)))
+            {
+                var reported = _items.Select(i => i.Key).ToHashSet();
+                foreach (var f in (LastScan.Load()?.Found ?? new()).AsEnumerable().Reverse())
+                    if (!reported.Contains(f.Key) && (f.FilePath.Length == 0 || System.IO.File.Exists(f.FilePath)))
                         _items.Insert(0, f);
+            }
             UpdateHeadline(result.FirstRun ? $"Baseline saved with {result.BaselineCount} items. Later checks show what changes." : null);
             var threats = result.Items.Count(i => i.IsMalware);
             var review = result.Items.Count - threats;
