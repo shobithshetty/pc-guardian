@@ -15,6 +15,14 @@ public sealed class LastScan
     /// <summary>The threats that scan found, so they can be listed again after a restart (a quick check only shows changes).</summary>
     public List<FindingItem> Found { get; set; } = new();
 
+    /// <summary>The saved threats to list again: those still on disk that the current check did not itself report.</summary>
+    public static List<FindingItem> Restorable(IEnumerable<string> reportedKeys)
+    {
+        var reported = reportedKeys.ToHashSet();
+        // Several rules can match one file, so a saved key may repeat; keep every finding, as the full scan showed them.
+        return (Load()?.Found ?? new()).Where(f => !reported.Contains(f.Key) && (f.FilePath.Length == 0 || File.Exists(f.FilePath))).ToList();
+    }
+
     /// <summary>Drops one saved threat (the person ignored that file) so it does not come back on the next start.</summary>
     public static void Forget(string key)
     {

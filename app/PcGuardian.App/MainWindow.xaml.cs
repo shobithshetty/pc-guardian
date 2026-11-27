@@ -288,14 +288,9 @@ public partial class MainWindow : Window
             foreach (var f in result.Items.OrderByDescending(i => i.IsMalware).ThenByDescending(i => i.IsAlert))
                 _items.Add(f);
             // A quick check only reports changes, so bring back the last full scan's threats that are still on disk.
-            // Several rules can match one file, so a saved key may repeat: only skip keys this check itself reported.
             if (!deep && !custom)
-            {
-                var reported = _items.Select(i => i.Key).ToHashSet();
-                foreach (var f in (LastScan.Load()?.Found ?? new()).AsEnumerable().Reverse())
-                    if (!reported.Contains(f.Key) && (f.FilePath.Length == 0 || System.IO.File.Exists(f.FilePath)))
-                        _items.Insert(0, f);
-            }
+                foreach (var f in LastScan.Restorable(_items.Select(i => i.Key)).AsEnumerable().Reverse())
+                    _items.Insert(0, f);
             UpdateHeadline(result.FirstRun ? $"Baseline saved with {result.BaselineCount} items. Later checks show what changes." : null);
             var threats = result.Items.Count(i => i.IsMalware);
             var review = result.Items.Count - threats;
@@ -525,8 +520,11 @@ public partial class MainWindow : Window
         _items.Clear();
         if (scenario is "tablet" or "phone") { foreach (var f in scenario == "tablet" ? tablet : phone) f.Device = "Samsung SM-T505"; ScanButton.Content = "Scan this PC"; }
         foreach (var f in scenario switch { "mixed" => mixed, "threats" => threats, "phone" => phone, "tablet" => tablet, "empty" => Array.Empty<FindingItem>(), _ => info }) _items.Add(f);
+        // "saved" uses the real last-scan.json (point PCGUARDIAN_DATA at a copy) and the same restore code as the app.
+        if (scenario == "saved") foreach (var f in LastScan.Restorable(Array.Empty<string>())) _items.Add(f);
         UpdateHeadline(null);
-        StatusText.Text = "Last full scan: today 9:41 PM  ·  7,787 files  ·  " + _items.Count + " items";
+        StatusText.Text = scenario == "saved" ? LastScan.Load()?.Describe() ?? "no saved scan"
+            : "Last full scan: today 9:41 PM  ·  7,787 files  ·  " + _items.Count + " items";
         ProtectionText.Text = "Protection data updated today";
 
         var root = (FrameworkElement)Content;
