@@ -22,6 +22,13 @@ Describe 'phone tools download' {
         $s.ToolsReady | Should -BeFalse
         @($s.Devices).Count | Should -Be 0
     }
+    It 'says so when another program is running its own adb and no phone is visible' {
+        $d = Join-Path ([IO.Path]::GetTempPath()) ('pcg-phone-' + [guid]::NewGuid())
+        Mock -ModuleName PcGuardian Get-Process { [pscustomobject]@{ Name = 'adb'; Id = 1 } }
+        (Get-GuardianPhoneStatus -DataPath $d).OtherAdbRunning | Should -BeTrue
+        Mock -ModuleName PcGuardian Get-Process { }
+        (Get-GuardianPhoneStatus -DataPath $d).OtherAdbRunning | Should -BeFalse
+    }
     It 'refuses to check a phone before the tools exist' {
         $d = Join-Path ([IO.Path]::GetTempPath()) ('pcg-phone-' + [guid]::NewGuid())
         { Invoke-GuardianPhoneCheck -Serial 'X' -DataPath $d } | Should -Throw '*not downloaded*'

@@ -49,15 +49,19 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Viewbox Width="46" Height="46">
+                <Grid Width="64" Height="64">
+                <Ellipse x:Name="ShieldHalo" Opacity="0.14" Fill="{DynamicResource Good}"/>
+                <Viewbox Width="38" Height="38">
                     <Canvas Width="24" Height="24">
                         <Path x:Name="ShieldPath" Fill="{DynamicResource Good}"
                               Data="M12,2 L20.5,5.2 L20.5,11 C20.5,16.2 16.9,20.4 12,22 C7.1,20.4 3.5,16.2 3.5,11 L3.5,5.2 Z"/>
                     </Canvas>
                 </Viewbox>
+                </Grid>
                 <StackPanel Grid.Column="1" Margin="18,0" VerticalAlignment="Center">
                     <TextBlock x:Name="Headline" FontSize="22" FontWeight="SemiBold" Text="Starting..."/>
                     <TextBlock x:Name="Subline" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}"/>
+                    <WrapPanel x:Name="Chips" Margin="0,8,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="MarkAllButton" Content="Mark all as safe" Style="{StaticResource SoftButton}" Margin="0,0,8,0" Visibility="Collapsed" Click="MarkAll_Click"/>
@@ -121,11 +125,12 @@
                                 <Border Padding="18,12" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,0,1">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="78"/>
+                                            <ColumnDefinition Width="52"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border CornerRadius="10" Padding="10,2" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                        <Border Width="36" Height="36" CornerRadius="18" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,2,0,0"
+                                                ToolTip="{Binding Level}" AutomationProperties.Name="{Binding Level}">
                                             <Border.Style>
                                                 <Style TargetType="Border">
                                                     <Setter Property="Background" Value="{DynamicResource PillInfoBg}"/>
@@ -139,7 +144,8 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <TextBlock Text="{Binding Level}" FontSize="12" FontWeight="SemiBold">
+                                            <TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Foreground" Value="{DynamicResource PillInfoFg}"/>
@@ -206,6 +212,40 @@
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
+                        <ItemsControl.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.ContainerStyle>
+                                    <Style TargetType="GroupItem">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="GroupItem">
+                                                    <StackPanel>
+                                                        <ToggleButton x:Name="Hdr" Style="{StaticResource SectionHeader}"
+                                                                      IsChecked="{Binding Items[0].StartsOpen, Mode=OneTime}">
+                                                            <DockPanel LastChildFill="False">
+                                                                <TextBlock x:Name="Chev" DockPanel.Dock="Left" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                                           FontSize="11" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource TextSecondary}"/>
+                                                                <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                                <Border DockPanel.Dock="Left" Margin="10,0,0,0" Padding="9,1" CornerRadius="9" Background="{DynamicResource PillInfoBg}" VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding ItemCount}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource PillInfoFg}"/>
+                                                                </Border>
+                                                            </DockPanel>
+                                                        </ToggleButton>
+                                                        <ItemsPresenter x:Name="Body"/>
+                                                    </StackPanel>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger SourceName="Hdr" Property="IsChecked" Value="False">
+                                                            <Setter TargetName="Body" Property="Visibility" Value="Collapsed"/>
+                                                            <Setter TargetName="Chev" Property="Text" Value="&#xE76C;"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </GroupStyle.ContainerStyle>
+                            </GroupStyle>
+                        </ItemsControl.GroupStyle>
                     </ItemsControl>
                 </ScrollViewer>
                 <TextBlock x:Name="EmptyText" Text="Nothing to review." HorizontalAlignment="Center" VerticalAlignment="Center"

@@ -20,10 +20,6 @@
     <Resource Include="Assets\pc-guardian.ico" />
   </ItemGroup>
 
-  <!-- The old Windows Forms window; superseded by MainWindow.xaml. Safe to delete from the repository. -->
-  <ItemGroup>
-    <Compile Remove="MainForm.cs;Program.cs" />
-  </ItemGroup>
 
   <!-- Ship the PowerShell engine next to the .exe so the installed app is self-contained. -->
   <ItemGroup>

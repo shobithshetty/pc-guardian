@@ -264,6 +264,39 @@ public sealed class FindingItem
 
     /// <summary>The label and colour class of the pill on the row: Threat, Alert or Info.</summary>
     public string Level => IsMalware ? "Threat" : IsAlert ? "Alert" : "Info";
+
+    /// <summary>The section this row sits in. Threats and alerts come first and start open; routine noise is folded away.</summary>
+    public string Group =>
+        IsMalware ? "Possible threats"
+        : IsAlert ? "Needs attention"
+        : Key.StartsWith("Phone:", StringComparison.Ordinal) ? "Phone or tablet"
+        : Key.StartsWith("Exposure:Update:", StringComparison.Ordinal) ? "Software updates"
+        : Key.StartsWith("ClickFix:", StringComparison.Ordinal) ? "Pasted commands"
+        : Key.StartsWith("Port:", StringComparison.Ordinal) ? "Open ports"
+        : Key.StartsWith("Task:", StringComparison.Ordinal) ? "Scheduled tasks"
+        : Key.StartsWith("Cert:", StringComparison.Ordinal) ? "Trusted certificates"
+        : Category == "Scanner" ? "Scanner notes"
+        : "Other items";
+
+    /// <summary>Sort position of <see cref="Group"/>: what matters most is listed first.</summary>
+    public int GroupOrder => Group switch
+    {
+        "Possible threats" => 0, "Needs attention" => 1, "Phone or tablet" => 2, "Pasted commands" => 3,
+        "Other items" => 4, "Software updates" => 5, "Open ports" => 6, "Scheduled tasks" => 7,
+        "Trusted certificates" => 8, _ => 9,
+    };
+
+    /// <summary>True for the sections that should be open when the list is first shown.</summary>
+    public bool StartsOpen => GroupOrder <= 4;
+
+    /// <summary>A Segoe Fluent / MDL2 icon for the row's kind, so a port, a certificate and a threat look different at a glance.</summary>
+    public string Glyph => Group switch
+    {
+        "Possible threats" => "", "Needs attention" => "", "Phone or tablet" => "",
+        "Pasted commands" => "", "Software updates" => "", "Open ports" => "",
+        "Scheduled tasks" => "", "Trusted certificates" => "", "Scanner notes" => "",
+        _ => "",
+    };
 }
 
 public sealed class RunResult
@@ -322,6 +355,8 @@ public sealed class PhoneDevice
 public sealed class PhoneStatus
 {
     public bool ToolsReady { get; set; }
+    /// <summary>Another program's adb is running and may be holding the phone, so it can look missing.</summary>
+    public bool OtherAdbRunning { get; set; }
     public List<PhoneDevice> Devices { get; set; } = new();
 }
 

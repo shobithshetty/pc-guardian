@@ -18,5 +18,8 @@ function Get-GuardianPhoneStatus {
         try { $devices = @(Get-AndroidDeviceSettled -Adb $t.Adb) }
         finally { Exit-PrivateAdb -Adb $t.Adb }
     }
-    [pscustomobject]@{ ToolsReady = $ready; Devices = $devices }
+    # pc-guardian's own server has been stopped by now, so an adb process still running belongs to another program
+    # (Android Studio, the SDK tools...). Only one adb server can hold a USB phone, which makes the phone look missing.
+    $other = (@($devices | Where-Object State -eq 'device').Count -eq 0) -and [bool](Get-Process -Name adb -ErrorAction SilentlyContinue)
+    [pscustomobject]@{ ToolsReady = $ready; Devices = $devices; OtherAdbRunning = $other }
 }

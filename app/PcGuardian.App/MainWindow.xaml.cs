@@ -29,7 +29,11 @@ public partial class MainWindow : Window
         _engine = engine;
         InitializeComponent();
         Title = $"pc-guardian {AppInfo.Version}";
-        ResultsList.ItemsSource = _items;
+        // The list is shown in sections (threats first, routine items folded away); the view sorts and groups _items.
+        var view = System.Windows.Data.CollectionViewSource.GetDefaultView(_items);
+        view.SortDescriptions.Add(new System.ComponentModel.SortDescription(nameof(FindingItem.GroupOrder), System.ComponentModel.ListSortDirection.Ascending));
+        view.GroupDescriptions.Add(new System.Windows.Data.PropertyGroupDescription(nameof(FindingItem.Group)));
+        ResultsList.ItemsSource = view;
         _items.CollectionChanged += (_, _) => UpdateMarkAll();
         _clock.Tick += (_, _) => UpdateStats();
         PreviewKeyDown += (_, e) =>
@@ -418,6 +422,7 @@ public partial class MainWindow : Window
     private void SetTone(string brushKey)
     {
         ShieldPath.SetResourceReference(Shape.FillProperty, brushKey);
+        ShieldHalo.SetResourceReference(Shape.FillProperty, brushKey);
         Headline.SetResourceReference(TextBlock.ForegroundProperty, brushKey == "Accent" ? "TextPrimary" : brushKey);
     }
 
@@ -447,6 +452,26 @@ public partial class MainWindow : Window
             SetTone("Good");
         }
         EmptyText.Visibility = !_working && _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        UpdateChips();
+    }
+
+    /// <summary>The small counts under the headline, so the picture is clear before the list is read. Zero counts are left out.</summary>
+    private void UpdateChips()
+    {
+        Chips.Children.Clear();
+        void Add(int n, string label, string bg, string fg)
+        {
+            if (n == 0) return;
+            var text = new TextBlock { Text = $"{n} {label}", FontSize = 12, FontWeight = FontWeights.SemiBold };
+            text.SetResourceReference(TextBlock.ForegroundProperty, fg);
+            var chip = new Border { CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 2, 10, 3), Margin = new Thickness(0, 0, 8, 0), Child = text };
+            chip.SetResourceReference(Border.BackgroundProperty, bg);
+            Chips.Children.Add(chip);
+        }
+        Add(_items.Count(i => i.IsMalware), "possible threats", "PillThreatBg", "PillThreatFg");
+        Add(_items.Count(i => !i.IsMalware && i.IsAlert), "need attention", "PillAlertBg", "PillAlertFg");
+        Add(_items.Count(i => i.Group == "Software updates"), "app updates", "PillInfoBg", "PillInfoFg");
+        Add(_items.Count(i => !i.IsMalware && !i.IsAlert && i.Group != "Software updates"), "other items", "PillInfoBg", "PillInfoFg");
     }
 
     /// <summary>"Mark all as safe" shows only when there is more than one item that can be marked.</summary>
@@ -578,6 +603,10 @@ public partial class MainWindow : Window
                 var waiting = status.Devices.Count > 0
                     ? "A device is connected but has not approved this PC yet (or is asleep). Unlock it and tap Allow on the \"Allow USB debugging?\" prompt, then try again."
                     : "No Android device was found.";
+                if (status.OtherAdbRunning && status.Devices.Count == 0)
+                    waiting += "\n\nAnother program (for example Android Studio or the Android SDK tools) is running its own phone connection, " +
+                               "and only one can hold the phone at a time. Close that program, or run \"adb kill-server\" in it, then try again. " +
+                               "pc-guardian will not stop it for you.";
                 MessageBox.Show(this,
                     waiting + "\n\nTo get a phone ready:\n" +
                     "1. Settings > About phone > tap Build number 7 times to turn on Developer options.\n" +
