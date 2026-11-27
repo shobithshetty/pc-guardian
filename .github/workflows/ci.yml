@@ -27,7 +27,8 @@ jobs:
       - name: Lint
         shell: pwsh
         run: |
-          $r = Invoke-ScriptAnalyzer -Path src, installer -Recurse -Severity Error,Warning
+          # -Path takes one folder, so analyze each in turn.
+          $r = foreach ($dir in 'src', 'installer') { Invoke-ScriptAnalyzer -Path $dir -Recurse -Severity Error,Warning }
           $r | Format-Table -AutoSize
           if ($r | Where-Object Severity -eq 'Error') { exit 1 }
 
