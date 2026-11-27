@@ -36,7 +36,13 @@ jobs:
 
       - name: Build app
         shell: pwsh
-        run: dotnet publish app/PcGuardian.App -c Release --self-contained false -o publish
+        env:
+          TAG: ${{ github.ref_name }}
+        # The app reports (and the update check compares) the version of the tag it was built from.
+        run: |
+          $version = $env:TAG.TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Tag '$env:TAG' is not vMAJOR.MINOR.PATCH" }
+          dotnet publish app/PcGuardian.App -c Release --self-contained false -o publish "-p:Version=$version"
 
       # Signing templates. Inputs were checked against the pinned action's action.yml.
       # Needs: variables SIGNPATH_ORGANIZATION_ID, SIGNPATH_CONNECTOR_URL, SIGNPATH_PROJECT_SLUG,
