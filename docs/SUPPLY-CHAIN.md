@@ -37,7 +37,7 @@ approves every change to what the tool trusts.**
 
 | What | How it stays current | Who decides |
 |---|---|---|
-| ClamAV virus database | Refreshed by `freshclam` (signature-checked by ClamAV) before the daily scan | Automatic, no code change |
+| ClamAV virus database | Refreshed by `freshclam` (signature-checked by ClamAV) when the person runs a scan | Automatic, no code change |
 | YARA, rules, Inno Setup | `tools/Check-Pins.ps1` runs daily in `.github/workflows/pin-watch.yml` and opens or updates one issue with the new versions, the upstream diff link and the hashes to pin | A person reviews the diff, then edits the pins in a pull request |
 | GitHub Actions | Dependabot opens weekly pull requests | A person reviews and merges |
 | Known-exploited list | Public CISA file, cached for a day, used only when the person turns it on | Informational only |

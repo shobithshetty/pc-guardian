@@ -142,17 +142,13 @@ public sealed class GuardianEngine
         RunVoidAsync("Remove-GuardianSafeItem -Key $env:PCG_KEY", new() { ["PCG_KEY"] = key }, ct);
 
     /// <summary>
-    /// Turns the daily scan on (at HH:mm) or off. Changing a scheduled task needs administrator rights,
-    /// so Windows shows its normal permission prompt.
+    /// Removes the daily scan task that an older version may have scheduled. pc-guardian no longer schedules anything.
+    /// Removing a scheduled task needs administrator rights, so Windows shows its normal permission prompt.
     /// </summary>
-    public async Task SetDailyScanAsync(bool enabled, string time, CancellationToken ct = default)
+    public async Task RemoveDailyScanAsync(CancellationToken ct = default)
     {
-        if (enabled && !System.Text.RegularExpressions.Regex.IsMatch(time, @"^([01]\d|2[0-3]):[0-5]\d$"))
-            throw new ArgumentException("Enter the time as HH:mm, for example 02:00.");
-
-        var script = FindTool("Install.ps1") ?? throw new InvalidOperationException("The scheduling script is missing. Reinstall the app.");
-        var args = $"-NoProfile -ExecutionPolicy Bypass -File \"{script}\" " +
-                   (enabled ? $"-ModulePath \"{_modulePath}\" -At {time}" : "-Remove");
+        var script = FindTool("RemoveDailyScan.ps1") ?? throw new InvalidOperationException("The clean-up script is missing. Reinstall the app.");
+        var args = $"-NoProfile -ExecutionPolicy Bypass -File \"{script}\"";
         var psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"), args)
         {
             UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden,

@@ -27,6 +27,11 @@
       <Link>module\PcGuardian\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- The one-off clean-up for a daily scan task that an older version scheduled (Settings offers it). -->
+    <Content Include="..\..\installer\RemoveDailyScan.ps1">
+      <Link>tools\RemoveDailyScan.ps1</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

@@ -73,9 +73,7 @@ public partial class SettingsWindow : Window
                 : settings.VirusTotal ? "Turned on, but no key is saved yet. Paste one above and press Save key."
                 : "No key saved.";
 
-            DailyCheck.IsChecked = daily.Exists && daily.Enabled;
-            if (!string.IsNullOrEmpty(daily.At)) TimeBox.Text = daily.At;
-            DailyStatus.Text = daily.Exists && daily.Enabled ? $"Scheduled daily at {daily.At}." : "The daily scan is off.";
+            LegacyDailyCard.Visibility = daily.Exists ? Visibility.Visible : Visibility.Collapsed;
 
             SafeList.ItemsSource = safe;
             SafeEmpty.Visibility = safe.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -181,19 +179,19 @@ public partial class SettingsWindow : Window
         catch (Exception ex) { Notice.Text = ex.Message; }
     }
 
-    private async void SaveDaily_Click(object sender, RoutedEventArgs e)
+    private async void RemoveDaily_Click(object sender, RoutedEventArgs e)
     {
-        SaveDailyButton.IsEnabled = false;
+        RemoveDailyButton.IsEnabled = false;
         Notice.Text = "Waiting for Windows permission...";
         try
         {
-            await _engine.SetDailyScanAsync(DailyCheck.IsChecked == true, TimeBox.Text.Trim());
+            await _engine.RemoveDailyScanAsync();
             await LoadAsync();
-            Notice.Text = "Saved.";
+            Notice.Text = "The daily scan was removed.";
         }
         catch (OperationCanceledException ex) { Notice.Text = ex.Message; }
         catch (Exception ex) { Notice.Text = ex.Message; }
-        finally { SaveDailyButton.IsEnabled = true; }
+        finally { RemoveDailyButton.IsEnabled = true; }
     }
 
     private async void RemoveSafe_Click(object sender, RoutedEventArgs e)

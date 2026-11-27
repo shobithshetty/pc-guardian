@@ -43,7 +43,8 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; Admin is needed once to register the daily scheduled scan.
+; Admin is needed to install under Program Files and to clean up a scan task left by an older version.
+; pc-guardian itself never schedules anything and never runs in the background.
 PrivilegesRequired=admin
 SetupIconFile=..\app\PcGuardian.App\Assets\pc-guardian.ico
 UninstallDisplayIcon={app}\PcGuardian.exe
@@ -52,11 +53,9 @@ UninstallDisplayName=pc-guardian
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"
 Name: "firstrunsetup"; Description: "Set up virus scanning when pc-guardian first opens (installs ClamAV if needed and downloads about 110 MB, with a progress bar)"; GroupDescription: "Protection:"
-Name: "dailyscan"; Description: "Run a full scan every day at 2:00 AM (read-only) and refresh the virus database first"; GroupDescription: "Protection:"
 
 [Files]
 Source: "..\publish\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "Install.ps1"; DestDir: "{app}\tools"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\pc-guardian"; Filename: "{app}\PcGuardian.exe"
@@ -65,7 +64,7 @@ Name: "{autodesktop}\pc-guardian"; Filename: "{app}\PcGuardian.exe"; Tasks: desk
 [Run]
 ; 0. The data folder is the standard Windows location unless another one is chosen on the "Data folder" page.
 ;    A custom choice is remembered for the person who started setup (not an elevated account) as the user
-;    environment variable PCGUARDIAN_DATA, which the app, the engine and the daily task all read.
+;    environment variable PCGUARDIAN_DATA, which the app and the engine both read.
 ;    Choosing the standard location again clears it.
 Filename: "powershell.exe"; \
   Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""[Environment]::SetEnvironmentVariable('PCGUARDIAN_DATA', '{code:GetDataDir}', 'User')"""; \
@@ -78,10 +77,6 @@ Filename: "powershell.exe"; \
 Filename: "powershell.exe"; \
   Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""$d = '{code:GetDataDir}'; New-Item -ItemType Directory -Force $d | Out-Null; Set-Content -Path (Join-Path $d 'auto-setup.flag') -Value 'yes'"""; \
   Flags: runhidden waituntilterminated runasoriginaluser; Tasks: firstrunsetup
-; 2. Daily scan task.
-Filename: "powershell.exe"; \
-  Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\Install.ps1"" -ModulePath ""{app}\module\PcGuardian\PcGuardian.psd1"""; \
-  Flags: runhidden waituntilterminated; Tasks: dailyscan; StatusMsg: "Scheduling the daily scan..."
 ; The app is started through cmd so it sees the chosen data folder right away (a running installer does not
 ; see the environment change it just made).
 Filename: "cmd.exe"; \
@@ -90,7 +85,7 @@ Filename: "cmd.exe"; \
 
 [UninstallRun]
 Filename: "powershell.exe"; \
-  Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\Install.ps1"" -Remove"; \
+  Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\RemoveDailyScan.ps1"""; \
   Flags: runhidden waituntilterminated; RunOnceId: "RemoveDailyScan"
 
 [Code]

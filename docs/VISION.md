@@ -56,7 +56,7 @@ Licences below are my understanding and **must be verified before any source is 
 | 0.3 | Engine hub: detectors as plug-ins, one result format, per-detector on/off and statistics |
 | 0.4 | Curated update feed: a signed manifest of reviewed, hash-pinned updates the app can check for |
 | 0.5 | Evaluated new sources (hash feeds, Sigma) added one at a time, each with false-positive measurements |
-| later | Quarantine on user request, scheduled reports, optional notifications |
+| later | Quarantine on user request. Never a resident process: no tray icon, service, scheduled scans or notifications |
 
 ## Success looks like
 

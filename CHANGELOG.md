@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **pc-guardian is on-demand only.** The optional daily 2:00 AM scheduled scan is gone: no installer option, no Settings
+  toggle, nothing scheduled. If an older version left that task on your PC, Settings shows "Daily scan from an earlier
+  version" with a button to remove it, and the uninstaller removes it too. `installer/Install.ps1` became
+  `installer/RemoveDailyScan.ps1` (removal only).
+- Results are shown in sections (threats and alerts first and open; updates, ports, tasks and certificates folded) with
+  an icon per kind and count chips under the headline.
+- The phone check says when another program's adb is running and no phone is visible.
+- A full scan's threats are remembered and listed again after a restart, matching the footer.
+
 - Faster full scan. Files that were found clean and have not changed (same size and modified time) are skipped
   for up to 7 days, then checked again, so repeat scans only look at new or changed files. Per-file limits (time,
   size, archive depth) stop one huge file from stalling a scan. The clean-file list is `scan-cache.json` in the data

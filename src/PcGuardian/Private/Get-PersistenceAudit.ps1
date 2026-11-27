@@ -4,7 +4,7 @@ function Get-DefenderExclusionAudit {
         Lists Microsoft Defender exclusions. Malware often adds one so Defender stops looking at it.
     .DESCRIPTION
         Defender hides the list from non-administrators ("N/A: Administrators only"); those values are skipped,
-        so run pc-guardian as administrator (the daily task does) to see them.
+        so run pc-guardian as administrator to see them.
     #>
     [CmdletBinding()]
     param()

@@ -12,8 +12,8 @@ It **orchestrates** what Windows already provides (Microsoft Defender, winget, W
 
 1. **Audit** (v0.1): snapshot Defender state, startup items, non-Microsoft scheduled tasks, listening ports, local admins.
 2. **Baseline and diff** (v0.2): the first run is saved as a baseline; later runs flag only what is new.
-3. **Update and scan** (v0.3): refresh Defender signatures, upgrade apps via winget, run scheduled Defender scans.
-4. **Schedule and alert** (v0.4): a scheduled task plus a toast notification when something needs attention.
+3. **Update and scan** (v0.3): refresh Defender signatures and check for app updates.
+4. **On demand only**: pc-guardian never runs in the background. No tray icon, no service and no scheduled scans: you open it when you want a check, and it updates only when the project publishes a new release.
 
 ## Status
 
