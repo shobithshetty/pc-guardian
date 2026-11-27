@@ -42,13 +42,18 @@ public sealed class LastScan
         catch { /* remembering the last scan is a convenience; never fail a scan over it */ }
     }
 
-    /// <summary>"Last full scan: today 8:27 PM · 3,421 files · no threats"</summary>
+    /// <summary>The saved threats whose file is still on disk (a phone or non-file threat has no path and always counts).</summary>
+    public int StillPresent => Found.Count(f => f.FilePath.Length == 0 || File.Exists(f.FilePath));
+
+    /// <summary>"Last full scan: today 8:27 PM · 3,421 files · no threats"; adds "(27 still present)" once some flagged files are gone.</summary>
     public string Describe()
     {
         var day = Time.Date == DateTime.Today ? "today"
                 : Time.Date == DateTime.Today.AddDays(-1) ? "yesterday"
                 : Time.ToString("d MMM");
         var threats = Threats == 0 ? "no threats" : Threats == 1 ? "1 possible threat" : $"{Threats} possible threats";
+        // Found is empty for scans saved by older versions, so only explain a gap we can actually measure.
+        if (Found.Count > 0 && StillPresent < Threats) threats += $" ({StillPresent} still present)";
         var files = Files > 0 ? $" · {Files:N0} files" : "";
         return $"Last full scan: {day} {Time:t}{files} · {threats}";
     }
